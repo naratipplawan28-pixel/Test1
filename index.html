@@ -1,195 +1,1680 @@
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Season Simulation - แบบจำลองการเกิดฤดูกาล</title>
-    <style>
-        body { margin: 0; overflow: hidden; background-color: #050510; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        #ui-panel { 
-            position: absolute; top: 20px; left: 20px; 
-            background: rgba(20, 20, 30, 0.85); 
-            padding: 20px; border-radius: 12px; 
-            border: 1px solid #444; z-index: 10; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            max-width: 320px;
-        }
-        h2 { margin-top: 0; font-size: 18px; color: #4da6ff; }
-        input[type=range] { width: 100%; margin: 10px 0; }
-        .info-box { background: rgba(0,0,0,0.5); padding: 10px; border-radius: 6px; margin-top: 15px; }
-        .season-highlight { font-weight: bold; color: #ffcc00; }
-        .hint { font-size: 12px; color: #aaa; margin-top: 15px; line-height: 1.5; }
-        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 20px; z-index: 0; }
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ทำไมโลกจึงมีฤดูกาล — แบบจำลองระบบสุริยะ 3 มิติ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-void:#070a15;
+  --bg-deep:#0c1122;
+  --bg-panel:rgba(13,18,38,0.74);
+  --bg-panel-solid:#10162c;
+  --bg-card:rgba(255,255,255,0.035);
+  --line:rgba(255,255,255,0.09);
+  --line-strong:rgba(255,255,255,0.18);
+  --text-primary:#edf0fa;
+  --text-muted:#8891b0;
+  --text-dim:#5b6488;
+  --sun:#f5a742;
+  --sun-bright:#ffd27a;
+  --earth-teal:#4fc8d6;
+  --violet:#9b8cf2;
+  --coral:#f2765a;
+  --radius-sm:8px;
+  --radius-md:14px;
+  --radius-lg:20px;
+  --font-display:'Chakra Petch',sans-serif;
+  --font-body:'Sarabun',sans-serif;
+  --sidebar-w:398px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;height:100%;background:var(--bg-void);overflow:hidden;}
+body{
+  font-family:var(--font-body);
+  color:var(--text-primary);
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select{font-family:inherit;}
+
+#app{position:fixed;inset:0;display:flex;flex-direction:row-reverse;}
+
+#scene{
+  position:absolute;inset:0;width:100%;height:100%;display:block;
+  touch-action:none;cursor:grab;
+}
+#scene.dragging{cursor:grabbing;}
+#scene.select-mode{cursor:crosshair;}
+
+/* ---------- top bar ---------- */
+.topbar{
+  position:absolute;top:0;left:0;right:var(--sidebar-w);z-index:20;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 22px;pointer-events:none;
+}
+.brand{display:flex;align-items:center;gap:12px;pointer-events:auto;}
+.brand-mark{
+  width:40px;height:40px;border-radius:50%;flex:none;
+  background:radial-gradient(circle at 35% 30%,var(--sun-bright),var(--sun) 55%,#a85f18 100%);
+  box-shadow:0 0 18px 2px rgba(245,167,66,0.55);
+}
+.brand-text h1{
+  font-family:var(--font-display);font-size:16px;font-weight:600;
+  margin:0;letter-spacing:.2px;line-height:1.25;
+  text-shadow:0 2px 12px rgba(0,0,0,.6);
+}
+.brand-text p{
+  margin:2px 0 0;font-size:11.5px;color:var(--text-muted);
+  letter-spacing:.3px;text-shadow:0 2px 10px rgba(0,0,0,.6);
+}
+.icon-btn{
+  pointer-events:auto;
+  width:40px;height:40px;border-radius:50%;
+  background:var(--bg-panel);border:1px solid var(--line);
+  color:var(--text-primary);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+.icon-btn svg{width:18px;height:18px;}
+.mobile-only{display:none;}
+
+.hint{
+  position:absolute;left:50%;bottom:20px;transform:translateX(-50%);
+  z-index:15;font-size:11.5px;color:var(--text-muted);
+  background:var(--bg-panel);border:1px solid var(--line);
+  padding:7px 14px;border-radius:99px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  pointer-events:none;letter-spacing:.2px;white-space:nowrap;
+  transition:opacity .4s ease;
+}
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  position:relative;z-index:30;width:var(--sidebar-w);flex:none;height:100%;
+  overflow-y:auto;overflow-x:hidden;
+  background:linear-gradient(180deg,rgba(9,13,26,0.88),rgba(9,13,26,0.94));
+  border-left:1px solid var(--line);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  padding:20px 18px 34px;
+  scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent;
+}
+.sidebar::-webkit-scrollbar{width:6px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px;}
+.sidebar-top-spacer{height:58px;}
+
+.eyebrow{
+  font-family:var(--font-display);font-size:10.5px;font-weight:600;
+  letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;
+  margin:0 0 8px 2px;
+}
+
+/* stat row */
+.stat-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px;}
+.stat-card{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:11px 9px;display:flex;flex-direction:column;gap:5px;min-height:88px;
+}
+.stat-card .stat-icon{width:15px;height:15px;color:var(--sun);opacity:.9;}
+.stat-card .stat-icon svg{width:100%;height:100%;}
+.stat-card[data-stat="tilt"] .stat-icon{color:var(--earth-teal);}
+.stat-card[data-stat="orbit"] .stat-icon{color:var(--violet);}
+.stat-label{font-size:10px;color:var(--text-muted);line-height:1.3;letter-spacing:.1px;}
+.stat-value{font-family:var(--font-display);font-size:15px;font-weight:600;color:var(--text-primary);line-height:1.15;}
+.stat-sub{font-size:9.5px;color:var(--text-dim);line-height:1.3;}
+
+/* panel */
+.panel{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius-md);
+  padding:16px 16px 18px;margin-bottom:14px;
+}
+.panel-title{
+  font-family:var(--font-display);font-size:13.5px;font-weight:600;
+  margin:0 0 14px;color:var(--text-primary);letter-spacing:.2px;
+  display:flex;align-items:center;gap:8px;
+}
+.panel-title .dot{width:6px;height:6px;border-radius:50%;background:var(--sun);flex:none;box-shadow:0 0 8px 1px var(--sun);}
+
+/* year dial */
+.dial-wrap{position:relative;width:190px;height:190px;margin:0 auto 14px;}
+#yearDial{width:100%;height:100%;overflow:visible;cursor:pointer;touch-action:none;}
+.dial-center{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  pointer-events:none;text-align:center;
+}
+.dial-date{font-family:var(--font-display);font-size:15px;font-weight:600;color:var(--text-primary);}
+.dial-date .yr{font-size:10.5px;color:var(--text-dim);display:block;margin-top:1px;font-family:var(--font-body);}
+.dial-hint{font-size:10px;color:var(--sun-bright);margin-top:5px;letter-spacing:.2px;max-width:120px;line-height:1.3;}
+
+.precise-inputs{display:flex;gap:8px;margin-bottom:12px;}
+.precise-inputs label{
+  flex:1;font-size:10px;color:var(--text-muted);display:flex;flex-direction:column;gap:4px;
+}
+.precise-inputs input{
+  background:rgba(255,255,255,0.04);border:1px solid var(--line);border-radius:var(--radius-sm);
+  color:var(--text-primary);padding:7px 8px;font-size:12.5px;color-scheme:dark;
+}
+.precise-inputs input:focus{outline:2px solid var(--earth-teal);outline-offset:1px;border-color:transparent;}
+
+.quickjump{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px;}
+.quickjump button{
+  background:rgba(255,255,255,0.03);border:1px solid var(--line);border-radius:var(--radius-sm);
+  color:var(--text-muted);padding:8px 6px;font-size:11px;cursor:pointer;line-height:1.5;
+  transition:border-color .15s,color .15s,background .15s;font-family:var(--font-body);
+}
+.quickjump button small{opacity:.75;font-size:9.5px;}
+.quickjump button:hover{border-color:var(--line-strong);color:var(--text-primary);background:rgba(255,255,255,0.06);}
+.quickjump button.active{border-color:var(--sun);color:var(--sun-bright);background:rgba(245,167,66,0.08);}
+
+.playrow{display:flex;align-items:center;gap:10px;}
+.ghost-btn{
+  background:rgba(255,255,255,0.04);border:1px solid var(--line);border-radius:var(--radius-sm);
+  color:var(--text-primary);padding:8px 12px;font-size:11.5px;cursor:pointer;white-space:nowrap;
+  font-family:var(--font-body);display:flex;align-items:center;gap:6px;
+}
+.ghost-btn:hover{border-color:var(--line-strong);}
+.ghost-btn.playing{color:var(--sun-bright);border-color:var(--sun);}
+#speedRange{flex:1;accent-color:var(--earth-teal);}
+
+/* view season */
+.primary-btn{
+  width:100%;background:linear-gradient(135deg,var(--sun),#d9862f);border:none;border-radius:var(--radius-sm);
+  color:#1a1206;font-family:var(--font-display);font-weight:600;font-size:13.5px;
+  padding:13px 14px;cursor:pointer;letter-spacing:.2px;
+  box-shadow:0 4px 18px -4px rgba(245,167,66,0.55);
+  transition:transform .15s,box-shadow .15s;display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.primary-btn:hover{transform:translateY(-1px);box-shadow:0 6px 22px -4px rgba(245,167,66,0.7);}
+.primary-btn.active{
+  background:linear-gradient(135deg,var(--earth-teal),#2a8b98);color:#04171a;
+  box-shadow:0 4px 18px -4px rgba(79,200,214,0.55);
+}
+.primary-btn .pulse{width:7px;height:7px;border-radius:50%;background:#04171a;animation:pulse 1.4s infinite ease-in-out;}
+@keyframes pulse{0%,100%{opacity:.35;transform:scale(.8);}50%{opacity:1;transform:scale(1.15);}}
+
+.select-wrap{margin-top:12px;}
+.select-wrap label{font-size:10.5px;color:var(--text-muted);display:block;margin-bottom:6px;}
+.select-wrap select{
+  width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--line);border-radius:var(--radius-sm);
+  color:var(--text-primary);padding:9px 10px;font-size:13px;color-scheme:dark;cursor:pointer;
+}
+.select-wrap select:focus{outline:2px solid var(--earth-teal);outline-offset:1px;}
+
+/* result card */
+.result-card{
+  margin-top:14px;border-radius:var(--radius-sm);border:1px solid var(--line-strong);
+  background:linear-gradient(160deg,rgba(79,200,214,0.09),rgba(255,255,255,0.02));
+  padding:15px 15px 16px;animation:fadeIn .35s ease;
+}
+.result-card.hidden{display:none;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.result-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:2px;}
+.result-place{font-family:var(--font-display);font-size:15px;font-weight:600;}
+.result-coords{font-size:10px;color:var(--text-dim);margin-bottom:10px;}
+.result-season{
+  display:inline-flex;align-items:center;gap:7px;
+  font-family:var(--font-display);font-size:14px;font-weight:600;color:var(--sun-bright);
+  background:rgba(245,167,66,0.1);border:1px solid rgba(245,167,66,0.3);
+  padding:6px 12px;border-radius:99px;margin-bottom:12px;
+}
+.result-desc{font-size:12.5px;color:var(--text-muted);line-height:1.65;margin-bottom:12px;}
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.result-metric{background:rgba(255,255,255,0.03);border:1px solid var(--line);border-radius:7px;padding:8px 10px;}
+.result-metric .rm-label{font-size:9.5px;color:var(--text-dim);display:block;margin-bottom:3px;}
+.result-metric .rm-value{font-family:var(--font-display);font-size:13px;font-weight:600;}
+
+.footer-note{font-size:10px;color:var(--text-dim);line-height:1.6;padding:4px 4px 0;text-align:center;}
+
+/* scale legend */
+.legend{
+  position:absolute;left:18px;bottom:18px;z-index:15;pointer-events:none;
+  font-size:10px;color:var(--text-dim);background:var(--bg-panel);
+  border:1px solid var(--line);padding:7px 11px;border-radius:8px;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);letter-spacing:.2px;
+}
+
+/* loading */
+#loadScreen{
+  position:fixed;inset:0;z-index:100;background:var(--bg-void);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  transition:opacity .6s ease;
+}
+#loadScreen .load-orb{
+  width:54px;height:54px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,var(--sun-bright),var(--sun) 55%,#a85f18 100%);
+  box-shadow:0 0 30px 4px rgba(245,167,66,0.5);animation:loadspin 1.8s linear infinite;
+}
+@keyframes loadspin{0%{transform:scale(1);}50%{transform:scale(1.15);}100%{transform:scale(1);}}
+#loadScreen p{font-family:var(--font-display);font-size:13px;color:var(--text-muted);letter-spacing:.5px;}
+
+/* focus visibility */
+a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{
+  outline:2px solid var(--earth-teal);outline-offset:2px;
+}
+
+@media (prefers-reduced-motion:reduce){
+  .primary-btn .pulse,#loadScreen .load-orb{animation:none;}
+}
+
+/* ---------- responsive: stacked mobile layout ---------- */
+@media (max-width:900px){
+  :root{--sidebar-w:100%;}
+  #app{flex-direction:column;}
+  #scene{position:relative;height:46vh;flex:none;}
+  .sidebar{width:100%;height:auto;flex:1;border-left:none;border-top:1px solid var(--line);}
+  .topbar{right:0;padding:14px 16px;}
+  .hint{bottom:auto;top:64px;}
+  .legend{bottom:auto;top:64px;left:auto;right:16px;}
+  .brand-text h1{font-size:14px;}
+  .brand-text p{display:none;}
+}
+</style>
 </head>
 <body>
-    <div id="loading">กำลังโหลดแบบจำลอง 3 มิติ...</div>
-    
-    <div id="ui-panel">
-        <h2>🌍 Season Simulation</h2>
-        
-        <label for="daySlider">วันที่ในรอบปี (Day <span id="dayDisplay">1</span>/365)</label>
-        <input type="range" id="daySlider" min="1" max="365" value="1">
-        
-        <button id="autoToggle" style="width:100%; padding: 8px; margin-top: 5px; cursor: pointer;">หยุดหมุนอัตโนมัติ</button>
 
-        <div class="info-box">
-            <strong>ตำแหน่งโลกปัจจุบัน:</strong><br>
-            ซีกโลกเหนือ: <span id="northSeason" class="season-highlight">ฤดูหนาว</span><br>
-            ซีกโลกใต้: <span id="southSeason" class="season-highlight">ฤดูร้อน</span>
-        </div>
+<div id="loadScreen"><div class="load-orb"></div><p>กำลังสร้างระบบสุริยะ…</p></div>
 
-        <div class="hint">
-            <strong>คำแนะนำ:</strong><br>
-            🖱️ คลิกซ้ายค้าง + ลาก เพื่อหมุนมุมกล้อง<br>
-            🖱️ เลื่อนลูกกลิ้งเมาส์ เพื่อซูมเข้า/ออก<br>
-            * สังเกตเส้นสีแดง (แกนโลก) ที่เอียง 23.5° ว่าหันเข้าหรือออกจากดวงอาทิตย์
-        </div>
+<div id="app">
+  <canvas id="scene"></canvas>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark"></span>
+      <div class="brand-text">
+        <h1>ทำไมโลกจึงมีฤดูกาล</h1>
+        <p>แบบจำลองระบบสุริยะ 3 มิติ — ดวงอาทิตย์ · โลก · ดวงจันทร์</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="hint" id="dragHint">ลากเพื่อหมุนมุมมอง · เลื่อนล้อ/บีบนิ้วเพื่อซูม</div>
+  <div class="legend">มาตราส่วนของขนาด/ระยะทางในภาพไม่ใช่มาตราส่วนจริง — ตัวเลขในแผงข้อมูลเป็นค่าจริง</div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top-spacer"></div>
+
+    <div class="stat-row">
+      <div class="stat-card" data-stat="dist">
+        <span class="stat-icon" id="iconDist"></span>
+        <span class="stat-label">ระยะห่างโลก–ดวงอาทิตย์</span>
+        <span class="stat-value" id="statDistance">—</span>
+        <span class="stat-sub" id="statDistanceSub"></span>
+      </div>
+      <div class="stat-card" data-stat="tilt">
+        <span class="stat-icon" id="iconTilt"></span>
+        <span class="stat-label">แกนเอียงของโลก</span>
+        <span class="stat-value">23.5°</span>
+        <span class="stat-sub">คงที่ตลอดวงโคจร</span>
+      </div>
+      <div class="stat-card" data-stat="orbit">
+        <span class="stat-icon" id="iconOrbit"></span>
+        <span class="stat-label">คาบ/ระยะการโคจร</span>
+        <span class="stat-value">365.25 วัน</span>
+        <span class="stat-sub" id="statOrbitProgress"></span>
+      </div>
     </div>
 
-    <script>
-        // ซ่อนข้อความโหลด
-        document.getElementById('loading').style.display = 'none';
+    <section class="panel">
+      <h2 class="panel-title"><span class="dot"></span>เลือกวันและเวลา</h2>
+      <div class="dial-wrap">
+        <svg id="yearDial" viewBox="0 0 190 190"></svg>
+        <div class="dial-center">
+          <div class="dial-date" id="dialDate">—</div>
+          <div class="dial-hint" id="dialHint">ลากรอบวงแหวนเพื่อเลือกวันที่</div>
+        </div>
+      </div>
+      <div class="precise-inputs">
+        <label>วันที่<input type="date" id="dateInput"></label>
+        <label>เวลา<input type="time" id="timeInput"></label>
+      </div>
+      <div class="quickjump">
+        <button data-jump="mar">วสันตวิษุวัต<br><small>20 มี.ค. · กลางวัน=กลางคืน</small></button>
+        <button data-jump="jun">ครีษมายัน<br><small>21 มิ.ย. · เหนือ:วันยาวสุด</small></button>
+        <button data-jump="sep">ศารทวิษุวัต<br><small>23 ก.ย. · กลางวัน=กลางคืน</small></button>
+        <button data-jump="dec">เหมายัน<br><small>21 ธ.ค. · เหนือ:วันสั้นสุด</small></button>
+      </div>
+      <div class="playrow">
+        <button class="ghost-btn" id="playBtn"><span id="playIcon">▶</span> เล่นอัตโนมัติ</button>
+        <input type="range" id="speedRange" min="1" max="4" value="2" step="1" aria-label="ความเร็ว">
+      </div>
+    </section>
 
-        // 1. ตั้งค่าฉาก (Scene) และกล้อง (Camera)
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 40, 90);
+    <section class="panel">
+      <h2 class="panel-title"><span class="dot" style="background:var(--earth-teal);box-shadow:0 0 8px 1px var(--earth-teal)"></span>ดูฤดูกาลตามพื้นที่</h2>
+      <button class="primary-btn" id="viewSeasonBtn">🌍 กดเพื่อเลือกจุดบนโลก</button>
+      <div class="select-wrap">
+        <label for="countrySelect">หรือเลือกประเทศ (มีครบทุกประเทศ)</label>
+        <select id="countrySelect"><option value="">— เลือกประเทศ —</option></select>
+      </div>
+      <div class="result-card hidden" id="resultCard"></div>
+    </section>
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+    <p class="footer-note">พิกัดประเทศใช้ตำแหน่งเมืองหลวง/จุดอ้างอิงโดยประมาณ · สูตรคำนวณฤดูอิงมุมเอียงแกนโลก 23.45°</p>
+  </aside>
+</div>
 
-        // ควบคุมมุมกล้อง
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enablePan = false;
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* =========================================================================
+   PART A — DATA: countries [ thaiName, englishName, lat, lng, continentCode ]
+   Coordinates are approximate capital-city / representative locations.
+   ========================================================================= */
+var CONTINENT_NAMES = {AS:"เอเชีย",EU:"ยุโรป",AF:"แอฟริกา",NA:"อเมริกาเหนือ",SA:"อเมริกาใต้",OC:"โอเชียเนีย"};
 
-        // 2. สร้างดวงอาทิตย์ (Sun)
-        const sunGeometry = new THREE.SphereGeometry(6, 32, 32);
-        const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffcc00 });
-        const sun = new THREE.Mesh(sunGeometry, sunMaterial);
-        scene.add(sun);
+var COUNTRIES = [
+["ไทย","Thailand",13.75,100.52,"AS"],
+["อัฟกานิสถาน","Afghanistan",34.53,69.17,"AS"],
+["อาร์เมเนีย","Armenia",40.18,44.51,"AS"],
+["อาเซอร์ไบจาน","Azerbaijan",40.41,49.87,"AS"],
+["บาห์เรน","Bahrain",26.23,50.59,"AS"],
+["บังกลาเทศ","Bangladesh",23.81,90.41,"AS"],
+["ภูฏาน","Bhutan",27.47,89.64,"AS"],
+["บรูไน","Brunei",4.94,114.95,"AS"],
+["กัมพูชา","Cambodia",11.56,104.92,"AS"],
+["จีน","China",39.90,116.41,"AS"],
+["ไซปรัส","Cyprus",35.19,33.38,"AS"],
+["จอร์เจีย","Georgia",41.72,44.79,"AS"],
+["อินเดีย","India",28.61,77.21,"AS"],
+["อินโดนีเซีย","Indonesia",-6.21,106.85,"AS"],
+["อิหร่าน","Iran",35.69,51.39,"AS"],
+["อิรัก","Iraq",33.31,44.36,"AS"],
+["อิสราเอล","Israel",31.77,35.21,"AS"],
+["ญี่ปุ่น","Japan",35.68,139.65,"AS"],
+["จอร์แดน","Jordan",31.95,35.93,"AS"],
+["คาซัคสถาน","Kazakhstan",51.18,71.45,"AS"],
+["คูเวต","Kuwait",29.38,47.99,"AS"],
+["คีร์กีซสถาน","Kyrgyzstan",42.87,74.59,"AS"],
+["ลาว","Laos",17.97,102.63,"AS"],
+["เลบานอน","Lebanon",33.89,35.50,"AS"],
+["มาเลเซีย","Malaysia",3.14,101.69,"AS"],
+["มัลดีฟส์","Maldives",4.18,73.51,"AS"],
+["มองโกเลีย","Mongolia",47.92,106.92,"AS"],
+["เมียนมา","Myanmar",19.76,96.08,"AS"],
+["เนปาล","Nepal",27.72,85.32,"AS"],
+["เกาหลีเหนือ","North Korea",39.02,125.75,"AS"],
+["โอมาน","Oman",23.59,58.41,"AS"],
+["ปากีสถาน","Pakistan",33.68,73.05,"AS"],
+["ปาเลสไตน์","Palestine",31.90,35.20,"AS"],
+["ฟิลิปปินส์","Philippines",14.60,120.98,"AS"],
+["กาตาร์","Qatar",25.29,51.53,"AS"],
+["ซาอุดีอาระเบีย","Saudi Arabia",24.71,46.68,"AS"],
+["สิงคโปร์","Singapore",1.35,103.82,"AS"],
+["เกาหลีใต้","South Korea",37.57,126.98,"AS"],
+["ศรีลังกา","Sri Lanka",6.93,79.85,"AS"],
+["ซีเรีย","Syria",33.51,36.28,"AS"],
+["ไต้หวัน","Taiwan",25.03,121.57,"AS"],
+["ทาจิกิสถาน","Tajikistan",38.56,68.79,"AS"],
+["ติมอร์-เลสเต","Timor-Leste",-8.55,125.56,"AS"],
+["ตุรกี","Turkey",39.93,32.86,"AS"],
+["เติร์กเมนิสถาน","Turkmenistan",37.95,58.38,"AS"],
+["สหรัฐอาหรับเอมิเรตส์","United Arab Emirates",24.47,54.37,"AS"],
+["อุซเบกิสถาน","Uzbekistan",41.31,69.28,"AS"],
+["เวียดนาม","Vietnam",21.03,105.85,"AS"],
+["เยเมน","Yemen",15.37,44.19,"AS"],
 
-        // แสงสว่างจากดวงอาทิตย์
-        const sunLight = new THREE.PointLight(0xffffff, 2, 300);
-        scene.add(sunLight);
-        scene.add(new THREE.AmbientLight(0x222222)); // แสงแวดล้อมมืดๆ
+["แอลเบเนีย","Albania",41.33,19.82,"EU"],
+["อันดอร์รา","Andorra",42.51,1.52,"EU"],
+["ออสเตรีย","Austria",48.21,16.37,"EU"],
+["เบลารุส","Belarus",53.90,27.57,"EU"],
+["เบลเยียม","Belgium",50.85,4.35,"EU"],
+["บอสเนียและเฮอร์เซโกวีนา","Bosnia and Herzegovina",43.86,18.41,"EU"],
+["บัลแกเรีย","Bulgaria",42.70,23.32,"EU"],
+["โครเอเชีย","Croatia",45.81,15.98,"EU"],
+["เช็กเกีย","Czech Republic",50.09,14.42,"EU"],
+["เดนมาร์ก","Denmark",55.68,12.57,"EU"],
+["เอสโตเนีย","Estonia",59.44,24.75,"EU"],
+["ฟินแลนด์","Finland",60.17,24.94,"EU"],
+["ฝรั่งเศส","France",48.86,2.35,"EU"],
+["เยอรมนี","Germany",52.52,13.40,"EU"],
+["กรีซ","Greece",37.98,23.73,"EU"],
+["ฮังการี","Hungary",47.50,19.04,"EU"],
+["ไอซ์แลนด์","Iceland",64.15,-21.94,"EU"],
+["ไอร์แลนด์","Ireland",53.35,-6.26,"EU"],
+["อิตาลี","Italy",41.90,12.50,"EU"],
+["โคโซโว","Kosovo",42.66,21.17,"EU"],
+["ลัตเวีย","Latvia",56.95,24.11,"EU"],
+["ลิกเตนสไตน์","Liechtenstein",47.14,9.52,"EU"],
+["ลิทัวเนีย","Lithuania",54.69,25.28,"EU"],
+["ลักเซมเบิร์ก","Luxembourg",49.61,6.13,"EU"],
+["มอลตา","Malta",35.90,14.51,"EU"],
+["มอลโดวา","Moldova",47.01,28.86,"EU"],
+["โมนาโก","Monaco",43.73,7.42,"EU"],
+["มอนเตเนโกร","Montenegro",42.44,19.26,"EU"],
+["เนเธอร์แลนด์","Netherlands",52.37,4.89,"EU"],
+["นอร์ทมาซิโดเนีย","North Macedonia",41.99,21.43,"EU"],
+["นอร์เวย์","Norway",59.91,10.75,"EU"],
+["โปแลนด์","Poland",52.23,21.01,"EU"],
+["โปรตุเกส","Portugal",38.72,-9.14,"EU"],
+["โรมาเนีย","Romania",44.43,26.10,"EU"],
+["รัสเซีย","Russia",55.75,37.62,"EU"],
+["ซานมารีโน","San Marino",43.94,12.45,"EU"],
+["เซอร์เบีย","Serbia",44.79,20.45,"EU"],
+["สโลวาเกีย","Slovakia",48.15,17.11,"EU"],
+["สโลวีเนีย","Slovenia",46.06,14.51,"EU"],
+["สเปน","Spain",40.42,-3.70,"EU"],
+["สวีเดน","Sweden",59.33,18.06,"EU"],
+["สวิตเซอร์แลนด์","Switzerland",46.95,7.45,"EU"],
+["ยูเครน","Ukraine",50.45,30.52,"EU"],
+["สหราชอาณาจักร","United Kingdom",51.51,-0.13,"EU"],
+["นครรัฐวาติกัน","Vatican City",41.90,12.45,"EU"],
 
-        // 3. สร้างกลุ่มของโลก (เพื่อจัดการการโคจรและแกนเอียงแยกกัน)
-        const earthGroup = new THREE.Group();
-        scene.add(earthGroup);
+["แอลจีเรีย","Algeria",36.75,3.06,"AF"],
+["แองโกลา","Angola",-8.84,13.23,"AF"],
+["เบนิน","Benin",6.37,2.42,"AF"],
+["บอตสวานา","Botswana",-24.66,25.91,"AF"],
+["บูร์กินาฟาโซ","Burkina Faso",12.37,-1.52,"AF"],
+["บุรุนดี","Burundi",-3.36,29.36,"AF"],
+["กาบูเวร์ดี","Cabo Verde",14.93,-23.51,"AF"],
+["แคเมอรูน","Cameroon",3.87,11.52,"AF"],
+["สาธารณรัฐแอฟริกากลาง","Central African Republic",4.36,18.56,"AF"],
+["ชาด","Chad",12.13,15.06,"AF"],
+["คอโมโรส","Comoros",-11.70,43.26,"AF"],
+["คองโก (กินชาซา)","DR Congo",-4.44,15.27,"AF"],
+["คองโก (บราซซาวิล)","Congo Republic",-4.26,15.24,"AF"],
+["จิบูตี","Djibouti",11.59,43.15,"AF"],
+["อียิปต์","Egypt",30.04,31.24,"AF"],
+["อิเควทอเรียลกินี","Equatorial Guinea",3.75,8.78,"AF"],
+["เอริเทรีย","Eritrea",15.32,38.93,"AF"],
+["เอสวาตินี","Eswatini",-26.32,31.13,"AF"],
+["เอธิโอเปีย","Ethiopia",9.03,38.74,"AF"],
+["กาบอง","Gabon",0.42,9.45,"AF"],
+["แกมเบีย","Gambia",13.45,-16.58,"AF"],
+["กานา","Ghana",5.60,-0.19,"AF"],
+["กินี","Guinea",9.64,-13.58,"AF"],
+["กินี-บิสเซา","Guinea-Bissau",11.86,-15.60,"AF"],
+["ไอวอรีโคสต์","Ivory Coast",6.83,-5.29,"AF"],
+["เคนยา","Kenya",-1.29,36.82,"AF"],
+["เลโซโท","Lesotho",-29.31,27.48,"AF"],
+["ไลบีเรีย","Liberia",6.30,-10.80,"AF"],
+["ลิเบีย","Libya",32.89,13.19,"AF"],
+["มาดากัสการ์","Madagascar",-18.88,47.51,"AF"],
+["มาลาวี","Malawi",-13.96,33.79,"AF"],
+["มาลี","Mali",12.65,-8.00,"AF"],
+["มอริเตเนีย","Mauritania",18.08,-15.98,"AF"],
+["มอริเชียส","Mauritius",-20.16,57.50,"AF"],
+["โมร็อกโก","Morocco",34.02,-6.84,"AF"],
+["โมซัมบิก","Mozambique",-25.97,32.57,"AF"],
+["นามิเบีย","Namibia",-22.56,17.08,"AF"],
+["ไนเจอร์","Niger",13.51,2.11,"AF"],
+["ไนจีเรีย","Nigeria",9.08,7.40,"AF"],
+["รวันดา","Rwanda",-1.94,30.06,"AF"],
+["เซาตูเมและปรินซิปี","Sao Tome and Principe",0.19,6.61,"AF"],
+["เซเนกัล","Senegal",14.72,-17.47,"AF"],
+["เซเชลส์","Seychelles",-4.62,55.45,"AF"],
+["เซียร์ราลีโอน","Sierra Leone",8.48,-13.23,"AF"],
+["โซมาเลีย","Somalia",2.05,45.32,"AF"],
+["แอฟริกาใต้","South Africa",-25.75,28.19,"AF"],
+["ซูดานใต้","South Sudan",4.85,31.58,"AF"],
+["ซูดาน","Sudan",15.50,32.56,"AF"],
+["แทนซาเนีย","Tanzania",-6.16,35.75,"AF"],
+["โตโก","Togo",6.13,1.22,"AF"],
+["ตูนิเซีย","Tunisia",36.81,10.18,"AF"],
+["ยูกันดา","Uganda",0.35,32.58,"AF"],
+["แซมเบีย","Zambia",-15.39,28.32,"AF"],
+["ซิมบับเว","Zimbabwe",-17.83,31.05,"AF"],
 
-        // สร้างโลก (Earth)
-        const earthGeometry = new THREE.SphereGeometry(2.5, 32, 32);
-        const earthMaterial = new THREE.MeshPhongMaterial({ 
-            color: 0x2266ff, 
-            emissive: 0x051530 
-        });
-        const earth = new THREE.Mesh(earthGeometry, earthMaterial);
-        
-        // ** หัวใจสำคัญ: ตั้งค่าแกนเอียง 23.5 องศา **
-        const tiltAngle = 23.5 * Math.PI / 180;
-        earth.rotation.z = tiltAngle; 
-        earthGroup.add(earth);
+["แอนติกาและบาร์บูดา","Antigua and Barbuda",17.06,-61.85,"NA"],
+["บาฮามาส","Bahamas",25.03,-77.40,"NA"],
+["บาร์เบโดส","Barbados",13.11,-59.62,"NA"],
+["เบลีซ","Belize",17.25,-88.77,"NA"],
+["แคนาดา","Canada",45.42,-75.70,"NA"],
+["คอสตาริกา","Costa Rica",9.93,-84.08,"NA"],
+["คิวบา","Cuba",23.13,-82.38,"NA"],
+["โดมินิกา","Dominica",15.30,-61.39,"NA"],
+["สาธารณรัฐโดมินิกัน","Dominican Republic",18.49,-69.94,"NA"],
+["เอลซัลวาดอร์","El Salvador",13.69,-89.22,"NA"],
+["เกรเนดา","Grenada",12.06,-61.75,"NA"],
+["กัวเตมาลา","Guatemala",14.63,-90.51,"NA"],
+["เฮติ","Haiti",18.59,-72.31,"NA"],
+["ฮอนดูรัส","Honduras",14.07,-87.19,"NA"],
+["จาเมกา","Jamaica",18.02,-76.80,"NA"],
+["เม็กซิโก","Mexico",19.43,-99.13,"NA"],
+["นิการากัว","Nicaragua",12.11,-86.24,"NA"],
+["ปานามา","Panama",8.98,-79.52,"NA"],
+["เซนต์คิตส์และเนวิส","Saint Kitts and Nevis",17.30,-62.73,"NA"],
+["เซนต์ลูเชีย","Saint Lucia",14.01,-60.99,"NA"],
+["เซนต์วินเซนต์และเกรนาดีนส์","Saint Vincent and the Grenadines",13.16,-61.22,"NA"],
+["ตรินิแดดและโตเบโก","Trinidad and Tobago",10.66,-61.52,"NA"],
+["สหรัฐอเมริกา","United States",38.90,-77.04,"NA"],
 
-        // สร้างเส้นแกนโลก (Axis Line) ให้เห็นชัดเจน
-        const axisPoints = [new THREE.Vector3(0, -4.5, 0), new THREE.Vector3(0, 4.5, 0)];
-        const axisGeometry = new THREE.BufferGeometry().setFromPoints(axisPoints);
-        const axisMaterial = new THREE.LineBasicMaterial({ color: 0xff3333, linewidth: 2 });
-        const axisLine = new THREE.Line(axisGeometry, axisMaterial);
-        axisLine.rotation.z = tiltAngle;
-        earthGroup.add(axisLine);
+["อาร์เจนตินา","Argentina",-34.61,-58.38,"SA"],
+["โบลิเวีย","Bolivia",-16.50,-68.15,"SA"],
+["บราซิล","Brazil",-15.79,-47.88,"SA"],
+["ชิลี","Chile",-33.45,-70.65,"SA"],
+["โคลอมเบีย","Colombia",4.71,-74.07,"SA"],
+["เอกวาดอร์","Ecuador",-0.19,-78.47,"SA"],
+["กายอานา","Guyana",6.80,-58.16,"SA"],
+["ปารากวัย","Paraguay",-25.28,-57.63,"SA"],
+["เปรู","Peru",-12.05,-77.04,"SA"],
+["ซูรินาม","Suriname",5.85,-55.17,"SA"],
+["อุรุกวัย","Uruguay",-34.90,-56.16,"SA"],
+["เวเนซุเอลา","Venezuela",10.49,-66.88,"SA"],
 
-        // 4. สร้างเส้นทางการโคจร (Orbit Path)
-        const orbitRadius = 45;
-        const orbitCurve = new THREE.EllipseCurve(0, 0, orbitRadius, orbitRadius, 0, 2 * Math.PI, false, 0);
-        const orbitPoints = orbitCurve.getPoints(100);
-        const orbitGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
-        const orbitMaterial = new THREE.LineBasicMaterial({ color: 0x444444 });
-        const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
-        orbitLine.rotation.x = Math.PI / 2; // จับวางแนวนอน
-        scene.add(orbitLine);
+["ออสเตรเลีย","Australia",-35.28,149.13,"OC"],
+["ฟิจิ","Fiji",-18.13,178.42,"OC"],
+["คิริบาส","Kiribati",1.33,172.98,"OC"],
+["หมู่เกาะมาร์แชลล์","Marshall Islands",7.10,171.38,"OC"],
+["ไมโครนีเซีย","Micronesia",6.92,158.16,"OC"],
+["นาอูรู","Nauru",-0.55,166.92,"OC"],
+["นิวซีแลนด์","New Zealand",-41.29,174.78,"OC"],
+["ปาเลา","Palau",7.34,134.48,"OC"],
+["ปาปัวนิวกินี","Papua New Guinea",-9.48,147.15,"OC"],
+["ซามัว","Samoa",-13.83,-171.76,"OC"],
+["หมู่เกาะโซโลมอน","Solomon Islands",-9.43,159.95,"OC"],
+["ตองงา","Tonga",-21.14,-175.20,"OC"],
+["ตูวาลู","Tuvalu",-8.52,179.20,"OC"],
+["วานูอาตู","Vanuatu",-17.73,168.32,"OC"]
+];
 
-        // 5. ระบบควบคุม UI และเวลา
-        const daySlider = document.getElementById('daySlider');
-        const dayDisplay = document.getElementById('dayDisplay');
-        const northSeasonText = document.getElementById('northSeason');
-        const southSeasonText = document.getElementById('southSeason');
-        const autoToggleBtn = document.getElementById('autoToggle');
 
-        let currentDay = 1;
-        let isAutoPlay = true;
+/* =========================================================================
+   PART B — CONFIG + ASTRONOMY MATH  (verified against known reference dates)
+   ========================================================================= */
+var CFG = {
+  SUN_R: 8.2,
+  EARTH_R: 1.5,
+  MOON_R: 0.40,
+  ORBIT_A: 42,           // visual semi-major axis of Earth's orbit
+  ORBIT_E: 0.0167,       // real eccentricity
+  MOON_ORBIT_R: 3.6,
+  TILT_DEG: 23.44,
+  AU_KM: 149600000,      // 1 AU in km, real
+  PERI_KM: 147100000,
+  APH_KM: 152100000,
+  ORBIT_PERIOD_DAYS: 365.25,
+  ORBIT_PATH_KM: 940000000, // approx total path length of one orbit
+  MOON_PERIOD_DAYS: 27.3,
+  EARTH_SPIN_TILT_LEAN: -1  // pole leans toward -X world axis (see thetaOf())
+};
 
-        autoToggleBtn.addEventListener('click', () => {
-            isAutoPlay = !isAutoPlay;
-            autoToggleBtn.innerText = isAutoPlay ? "หยุดหมุนอัตโนมัติ" : "เล่นอัตโนมัติ";
-        });
+var THAI_MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+var THAI_MONTHS_SHORT = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 
-        daySlider.addEventListener('input', (e) => {
-            isAutoPlay = false;
-            autoToggleBtn.innerText = "เล่นอัตโนมัติ";
-            currentDay = parseInt(e.target.value);
-            updateEarthPosition();
-        });
+function dayOfYear(date){
+  var start = Date.UTC(date.getFullYear(),0,0);
+  var cur = Date.UTC(date.getFullYear(),date.getMonth(),date.getDate());
+  return Math.floor((cur-start)/86400000);
+}
 
-        function updateEarthPosition() {
-            dayDisplay.innerText = Math.floor(currentDay);
+function toBuddhistYear(y){ return y+543; }
 
-            // คำนวณมุมโคจร: 1 ปี (365 วัน) = 360 องศา (2PI)
-            // ปรับ offset ให้วันที่ 1 (เหมายัน) อยู่ด้านขวา โลกเอียงหนีดวงอาทิตย์
-            const orbitAngle = ((currentDay - 1) / 365) * (Math.PI * 2);
-            
-            earthGroup.position.x = Math.cos(orbitAngle) * orbitRadius;
-            earthGroup.position.z = Math.sin(orbitAngle) * orbitRadius;
+function formatThaiDate(date){
+  return date.getDate()+" "+THAI_MONTHS[date.getMonth()]+" พ.ศ. "+toBuddhistYear(date.getFullYear());
+}
+function formatThaiDateShort(date){
+  return date.getDate()+" "+THAI_MONTHS_SHORT[date.getMonth()];
+}
 
-            // อัปเดตข้อมูลฤดูกาลอย่างง่ายตามช่วงวัน
-            if (currentDay >= 355 || currentDay < 80) {
-                northSeasonText.innerText = "ฤดูหนาว (Winter Solstice)";
-                southSeasonText.innerText = "ฤดูร้อน (Summer)";
-            } else if (currentDay >= 80 && currentDay < 172) {
-                northSeasonText.innerText = "ฤดูใบไม้ผลิ (Vernal Equinox)";
-                southSeasonText.innerText = "ฤดูใบไม้ร่วง (Autumn)";
-            } else if (currentDay >= 172 && currentDay < 264) {
-                northSeasonText.innerText = "ฤดูร้อน (Summer Solstice)";
-                southSeasonText.innerText = "ฤดูหนาว (Winter)";
-            } else {
-                northSeasonText.innerText = "ฤดูใบไม้ร่วง (Autumnal Equinox)";
-                southSeasonText.innerText = "ฤดูใบไม้ผลิ (Spring)";
-            }
-        }
+// Solar declination (deg) for a given day-of-year (standard approximation)
+function solarDeclination(N){
+  return 23.45*Math.sin((2*Math.PI/365)*(N-81));
+}
 
-        // 6. ลูปการเคลื่อนไหว (Animation Loop)
-        function animate() {
-            requestAnimationFrame(animate);
+// Day length in hours at a given latitude for a given declination
+function dayLengthHours(lat,decl){
+  var latR = lat*Math.PI/180, declR = decl*Math.PI/180;
+  var cosH = -Math.tan(latR)*Math.tan(declR);
+  if (cosH <= -1) return 24;
+  if (cosH >= 1) return 0;
+  var H = Math.acos(cosH);
+  return (2*H*180/Math.PI)/15;
+}
 
-            if (isAutoPlay) {
-                currentDay += 0.3; // ความเร็วการโคจร
-                if (currentDay > 365) currentDay = 1;
-                daySlider.value = currentDay;
-                updateEarthPosition();
-            }
+// Sun elevation angle (deg) at local solar noon
+function noonElevation(lat,decl){
+  return 90 - Math.abs(lat-decl);
+}
 
-            // โลกหมุนรอบตัวเองเสมอ
-            earth.rotation.y += 0.03;
+// Earth-Sun distance in km for a given day-of-year (first-order Kepler approx)
+function sunDistanceKm(N){
+  var a = CFG.AU_KM, e = CFG.ORBIT_E, periDay = 3;
+  var days = N-periDay; if (days<0) days += 365.25;
+  var M = 2*Math.PI*days/365.25;
+  return a*(1-e*Math.cos(M));
+}
 
-            controls.update();
-            renderer.render(scene, camera);
-        }
+// Orbital direction angle (deg) used for BOTH position direction and the
+// ellipse magnitude formula, calibrated so day172(~Jun21) sits at theta=0
+// (N-hemisphere summer-solstice position; pole leans toward the sun there).
+function thetaOf(N){ return (N-172)/365*360; }
+var THETA_PERI = thetaOf(3); // perihelion direction, ~ -166.7 deg
 
-        // เริ่มต้นการจำลอง
-        updateEarthPosition();
-        animate();
+// Earth's position on its (slightly) elliptical orbit, world XZ plane, Sun at origin
+function earthOrbitPosition(N){
+  var th = thetaOf(N)*Math.PI/180;
+  var thp = THETA_PERI*Math.PI/180;
+  var r = CFG.ORBIT_A*(1-CFG.ORBIT_E*CFG.ORBIT_E)/(1+CFG.ORBIT_E*Math.cos(th-thp));
+  return {x:r*Math.cos(th), z:r*Math.sin(th), r:r, thetaDeg: thetaOf(N)};
+}
 
-        // ปรับขนาดเมื่อย่อ/ขยายหน้าต่างเบราว์เซอร์
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-    </script>
+// Season classification for latitude + day-of-year
+var SEASON_BOUND = {marEq:79, junSol:172, sepEq:265, decSol:355};
+function seasonNameNorth(N){
+  if (N<SEASON_BOUND.marEq || N>=SEASON_BOUND.decSol) return "winter";
+  if (N<SEASON_BOUND.junSol) return "spring";
+  if (N<SEASON_BOUND.sepEq) return "summer";
+  return "autumn";
+}
+var SEASON_FLIP = {winter:"summer",summer:"winter",spring:"autumn",autumn:"spring"};
+var SEASON_TH = {
+  spring:{name:"ฤดูใบไม้ผลิ",icon:"🌱",color:"#8bd17c"},
+  summer:{name:"ฤดูร้อน",icon:"☀️",color:"#f5a742"},
+  autumn:{name:"ฤดูใบไม้ร่วง",icon:"🍂",color:"#e08a3e"},
+  winter:{name:"ฤดูหนาว",icon:"❄️",color:"#7ec8e3"}
+};
+
+function getSeasonInfo(lat,N){
+  var decl = solarDeclination(N);
+  var dl = dayLengthHours(lat,decl);
+  var elev = noonElevation(lat,decl);
+  var zone = Math.abs(lat)<=23.44 ? "tropical" : (Math.abs(lat)<=66.56 ? "temperate" : "polar");
+  var nName = seasonNameNorth(N);
+  var sName = lat>=0 ? nName : SEASON_FLIP[nName];
+  var out = {zone:zone, declination:decl, dayLength:dl, noonElevation:elev, seasonKey:sName};
+
+  if (zone === "tropical"){
+    out.label = "เขตร้อน (Tropical)";
+    out.icon = "🌴";
+    out.color = "#4fc8d6";
+    var overhead = Math.abs(lat-decl) < 5;
+    var desc = "ละติจูดนี้อยู่ในเขตร้อน ดวงอาทิตย์ตั้งฉากหรือเกือบตั้งฉากได้ตลอดปี อุณหภูมิจึงค่อนข้างคงที่ทั้งปี ไม่มี 4 ฤดูแบบเขตอบอุ่น ฤดูกาลท้องถิ่นในเขตนี้มักแบ่งตามปริมาณฝน (ฤดูฝน/ฤดูแล้ง) ซึ่งขึ้นกับลมมรสุมของแต่ละภูมิภาคมากกว่าอุณหภูมิ";
+    if (overhead) desc += " ในวันที่เลือกนี้ ดวงอาทิตย์เที่ยงวันอยู่เกือบตรงศีรษะพอดี (เงาสั้นมาก)";
+    out.desc = desc;
+  } else if (zone === "temperate"){
+    var t = SEASON_TH[sName];
+    out.label = t.name;
+    out.icon = t.icon;
+    out.color = t.color;
+    out.desc = "อยู่ในเขตอบอุ่น มี 4 ฤดูชัดเจนตามมุมเอียงแกนโลกที่รับแสงอาทิตย์เปลี่ยนไปตลอดปี ขณะนี้ตรงกับ"+t.name+" กลางวันยาว "+dl.toFixed(1)+" ชั่วโมง ดวงอาทิตย์เที่ยงวันสูงสุดจากขอบฟ้าประมาณ "+Math.max(0,elev).toFixed(0)+"°";
+  } else {
+    var t2 = SEASON_TH[sName];
+    out.label = t2.name+" (เขตขั้วโลก)";
+    out.icon = t2.icon;
+    out.color = t2.color;
+    var extra = "";
+    if (dl>=23.9) extra = " ช่วงนี้มีปรากฏการณ์ กลางวัน 24 ชั่วโมง (Midnight Sun) ดวงอาทิตย์ไม่ตกดิน";
+    else if (dl<=0.1) extra = " ช่วงนี้มีปรากฏการณ์ กลางคืน 24 ชั่วโมง (Polar Night) ดวงอาทิตย์ไม่ขึ้นเลย";
+    out.desc = "อยู่ในเขตขั้วโลก ความยาวกลางวัน-กลางคืนต่างกันสุดขั้วระหว่างปี ขณะนี้ตรงกับ"+t2.name+" กลางวันยาว "+dl.toFixed(1)+" ชั่วโมง"+extra;
+  }
+  return out;
+}
+
+
+/* =========================================================================
+   PART C — THREE.JS CORE: scene, renderer, camera, lights, starfield,
+   and a hand-rolled orbit camera controller (no external addons needed).
+   ========================================================================= */
+var scene, camera, renderer, sunLight, ambientLight;
+var canvas = document.getElementById('scene');
+var clockTime = 0, lastFrameMs = 0;
+
+function initThree(){
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(45, canvas.clientWidth/canvas.clientHeight, 0.05, 3000);
+  renderer = new THREE.WebGLRenderer({canvas:canvas, antialias:true, alpha:false});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+
+  ambientLight = new THREE.AmbientLight(0x40507a, 0.30);
+  scene.add(ambientLight);
+
+  sunLight = new THREE.PointLight(0xfff2dc, 3.1, 0, 0); // decay=0 => no falloff, stable lighting regardless of scaled distance
+  sunLight.position.set(0,0,0);
+  scene.add(sunLight);
+
+  buildStarfield();
+  window.addEventListener('resize', onResize);
+  onResize();
+}
+
+function onResize(){
+  var w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w||!h) return;
+  camera.aspect = w/h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w,h,false);
+}
+
+function buildStarfield(){
+  function layer(count,size,color,opacity,rmin,rspan){
+    var pos = new Float32Array(count*3);
+    for (var i=0;i<count;i++){
+      var r = rmin+Math.random()*rspan;
+      var th = Math.random()*Math.PI*2;
+      var ph = Math.acos(2*Math.random()-1);
+      pos[i*3]   = r*Math.sin(ph)*Math.cos(th);
+      pos[i*3+1] = r*Math.cos(ph);
+      pos[i*3+2] = r*Math.sin(ph)*Math.sin(th);
+    }
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+    var mat = new THREE.PointsMaterial({color:color,size:size,sizeAttenuation:false,transparent:true,opacity:opacity,depthWrite:false});
+    scene.add(new THREE.Points(geo,mat));
+  }
+  layer(4200,1.3,0xffffff,0.9,320,900);
+  layer(1600,2.2,0x9fb3ff,0.55,320,900);
+  layer(500,2.6,0xffe3b8,0.5,320,900);
+}
+
+/* ---- custom orbit camera controller (target follows Earth) ---- */
+var camCtl = {
+  target:new THREE.Vector3(0,0,0),
+  radius:96, minRadius:2.6, maxRadius:230,
+  theta:0.72, phi:1.18, minPhi:0.12, maxPhi:Math.PI-0.12,
+  dragging:false, moved:false, lastX:0, lastY:0
+};
+var pointers = {}, lastPinchDist = null;
+
+function updateCameraFromCtl(){
+  var x = camCtl.target.x + camCtl.radius*Math.sin(camCtl.phi)*Math.sin(camCtl.theta);
+  var y = camCtl.target.y + camCtl.radius*Math.cos(camCtl.phi);
+  var z = camCtl.target.z + camCtl.radius*Math.sin(camCtl.phi)*Math.cos(camCtl.theta);
+  camera.position.set(x,y,z);
+  camera.lookAt(camCtl.target);
+}
+function clampRadius(r){ return Math.max(camCtl.minRadius, Math.min(camCtl.maxRadius,r)); }
+function getPinchDist(){
+  var ids = Object.keys(pointers);
+  var a = pointers[ids[0]], b = pointers[ids[1]];
+  return Math.hypot(a.x-b.x,a.y-b.y);
+}
+
+function initCameraControls(){
+  canvas.addEventListener('pointerdown', function(e){
+    canvas.setPointerCapture(e.pointerId);
+    pointers[e.pointerId] = {x:e.clientX,y:e.clientY};
+    if (Object.keys(pointers).length===1){
+      camCtl.dragging = true; camCtl.moved = false;
+      camCtl.lastX = e.clientX; camCtl.lastY = e.clientY;
+      camThetaTarget = null; camPhiTarget = null;
+      canvas.classList.add('dragging');
+    } else { lastPinchDist = getPinchDist(); }
+  });
+  canvas.addEventListener('pointermove', function(e){
+    if (!pointers[e.pointerId]) return;
+    pointers[e.pointerId] = {x:e.clientX,y:e.clientY};
+    var n = Object.keys(pointers).length;
+    if (n===1 && camCtl.dragging){
+      var dx = e.clientX-camCtl.lastX, dy = e.clientY-camCtl.lastY;
+      if (Math.abs(dx)+Math.abs(dy)>3) camCtl.moved = true;
+      camCtl.theta -= dx*0.0055;
+      camCtl.phi -= dy*0.0055;
+      camCtl.phi = Math.max(camCtl.minPhi, Math.min(camCtl.maxPhi, camCtl.phi));
+      camCtl.lastX = e.clientX; camCtl.lastY = e.clientY;
+    } else if (n===2){
+      var d = getPinchDist();
+      if (lastPinchDist){
+        var delta = d-lastPinchDist;
+        camCtl.radius = clampRadius(camCtl.radius*(1-delta*0.004));
+      }
+      lastPinchDist = d;
+    }
+  });
+  function endPointer(e){
+    delete pointers[e.pointerId];
+    var n = Object.keys(pointers).length;
+    if (n===0){
+      if (camCtl.dragging && !camCtl.moved) handleCanvasClick(e);
+      camCtl.dragging = false;
+      canvas.classList.remove('dragging');
+      lastPinchDist = null;
+    } else if (n===1){ lastPinchDist = null; }
+  }
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+  canvas.addEventListener('wheel', function(e){
+    e.preventDefault();
+    camCtl.radius = clampRadius(camCtl.radius*(1+e.deltaY*0.0012));
+  }, {passive:false});
+}
+
+
+/* =========================================================================
+   PART D — EARTH GEOMETRY + PROCEDURAL TEXTURES
+   A hand-built UV sphere guarantees exact, invertible lat/lon <-> uv mapping
+   (used later so raycaster.uv gives exact click coordinates on the globe).
+   ========================================================================= */
+function latLonToVector3(lat,lon,radius){
+  var latR=lat*Math.PI/180, lonR=lon*Math.PI/180;
+  return new THREE.Vector3(
+    radius*Math.cos(latR)*Math.sin(lonR),
+    radius*Math.sin(latR),
+    radius*Math.cos(latR)*Math.cos(lonR)
+  );
+}
+
+function buildUVSphere(radius,wSeg,hSeg){
+  var positions=[],normals=[],uvs=[],indices=[];
+  for (var iy=0; iy<=hSeg; iy++){
+    var v=iy/hSeg, lat=90-v*180;
+    for (var ix=0; ix<=wSeg; ix++){
+      var u=ix/wSeg, lon=u*360-180;
+      var p = latLonToVector3(lat,lon,radius);
+      positions.push(p.x,p.y,p.z);
+      normals.push(p.x/radius,p.y/radius,p.z/radius);
+      uvs.push(u,v);
+    }
+  }
+  for (var iy2=0; iy2<hSeg; iy2++){
+    for (var ix2=0; ix2<wSeg; ix2++){
+      var a=iy2*(wSeg+1)+ix2, b=a+wSeg+1, c=a+1, d=b+1;
+      indices.push(a,b,c, b,d,c);
+    }
+  }
+  var geo = new THREE.BufferGeometry();
+  geo.setIndex(indices);
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals,3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs,2));
+  return geo;
+}
+
+/* ---- rough continent silhouettes as [lon,lat] polygons (stylised, not survey-accurate) ---- */
+var LANDMASSES = [
+[[-168,66],[-162,60],[-150,61],[-140,60],[-130,55],[-125,49],[-124,40],[-117,33],[-108,23],[-97,16],[-92,14],[-87,16],[-83,21],[-80,25],[-81,31],[-75,35],[-70,41],[-65,45],[-60,47],[-55,51],[-65,58],[-75,62],[-85,68],[-95,70],[-110,72],[-130,71],[-145,70],[-155,71],[-165,68]],
+[[-77,8],[-72,-3],[-70,-15],[-71,-25],[-70,-35],[-73,-45],[-68,-54],[-65,-53],[-62,-42],[-58,-35],[-54,-33],[-48,-26],[-40,-14],[-35,-8],[-40,-2],[-48,3],[-55,5],[-60,8],[-67,10],[-73,9]],
+[[-17,20],[-16,14],[-10,8],[-4,5],[4,6],[9,3],[9,-3],[12,-6],[12,-17],[14,-23],[17,-29],[20,-34],[26,-34],[30,-29],[33,-24],[35,-18],[40,-14],[40,-6],[44,-2],[42,4],[48,2],[51,10],[48,12],[44,11],[42,15],[38,19],[36,23],[35,28],[32,31],[27,32],[19,32],[11,33],[3,37],[-4,36],[-9,32],[-11,29]],
+[[35,29],[38,22],[43,18],[50,17],[54,20],[57,23],[59,26],[56,26],[52,29],[47,30],[41,31],[36,32]],
+[[68,24],[70,20],[73,16],[76,11],[78,9],[80,13],[80,17],[83,18],[86,21],[89,22],[88,25],[85,26],[80,29],[76,32],[73,33],[70,29]],
+[[75,40],[78,35],[82,30],[90,28],[92,22],[97,21],[100,23],[102,28],[104,32],[108,32],[112,34],[118,34],[121,31],[122,36],[124,38],[122,40],[118,40],[112,40],[105,42],[98,42],[90,44],[85,48],[78,50],[72,48],[70,44]],
+[[60,50],[62,58],[65,66],[70,70],[80,72],[95,73],[110,73],[125,71],[135,68],[140,62],[135,56],[128,50],[118,50],[105,52],[92,50],[80,52],[68,52]],
+[[-9,43],[-9,37],[-6,36],[0,38],[9,38],[15,40],[19,40],[23,37],[28,41],[27,45],[24,48],[26,52],[30,55],[28,60],[24,66],[20,69],[12,66],[10,58],[5,58],[0,52],[-5,49],[-9,48]],
+[[-10,52],[-8,54],[-6,55],[-5,58],[-3,58],[-2,56],[-1,53],[1,52],[-3,50],[-6,50],[-10,51]],
+[[92,21],[96,20],[98,17],[99,13],[101,7],[104,2],[103,1],[100,5],[98,8],[95,15],[93,18]],
+[[130,31],[132,33],[133,35],[136,35],[138,37],[140,40],[141,43],[144,44],[142,40],[140,36],[136,34],[133,33],[131,31]],
+[[96,5],[99,2],[102,-1],[104,-5],[101,-6],[98,-2],[96,2]],
+[[105,-6],[110,-7],[114,-8],[114,-8.5],[108,-7]],
+[[109,4],[113,4],[117,2],[118,-2],[115,-3],[110,0]],
+[[122,5],[121,10],[122,14],[121,18],[120,16],[119,10],[120,6]],
+[[131,-2],[135,-4],[141,-3],[150,-6],[147,-9],[140,-8],[134,-6]],
+[[113,-22],[114,-26],[115,-33],[118,-35],[124,-34],[131,-32],[136,-35],[140,-38],[145,-38],[150,-37],[153,-28],[153,-24],[148,-20],[145,-16],[142,-11],[137,-12],[131,-12],[126,-14],[122,-17]],
+[[173,-35],[175,-37],[178,-39],[177,-40],[174,-38]],
+[[166,-45],[169,-44],[173,-41],[174,-42],[171,-46],[167,-47]],
+[[-45,60],[-42,65],[-35,70],[-25,72],[-20,75],[-25,78],[-35,82],[-50,83],[-60,81],[-65,76],[-68,70],[-60,65],[-52,62]],
+[[43,-12],[47,-13],[50,-16],[47,-25],[44,-25],[43,-20]]
+];
+
+function llPx(lon,lat,w,h){ return [(lon+180)/360*w, (90-lat)/180*h]; }
+function hexToRgb(hex){ var n=parseInt(hex.replace('#',''),16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+function lerpColor(h1,h2,t){
+  var a=hexToRgb(h1), b=hexToRgb(h2);
+  return 'rgb('+Math.round(a[0]+(b[0]-a[0])*t)+','+Math.round(a[1]+(b[1]-a[1])*t)+','+Math.round(a[2]+(b[2]-a[2])*t)+')';
+}
+var LAT_COLOR_STOPS = [[-90,'#eef4f7'],[-72,'#8fa07e'],[-52,'#4a7c45'],[-28,'#9c8a52'],[-14,'#2f6b3f'],[14,'#2f6b3f'],[28,'#9c8a52'],[52,'#4a7c45'],[72,'#8fa07e'],[90,'#eef4f7']];
+function landColorAt(lat){
+  for (var i=0;i<LAT_COLOR_STOPS.length-1;i++){
+    var s0=LAT_COLOR_STOPS[i], s1=LAT_COLOR_STOPS[i+1];
+    if (lat>=s0[0] && lat<=s1[0]) return lerpColor(s0[1],s1[1],(lat-s0[0])/(s1[0]-s0[0]));
+  }
+  return lat<0 ? LAT_COLOR_STOPS[0][1] : LAT_COLOR_STOPS[LAT_COLOR_STOPS.length-1][1];
+}
+
+function shapePixelPoints(shape,w,h){ return shape.map(function(p){ return llPx(p[0],p[1],w,h); }); }
+function traceShapePath(ctx,pts){
+  ctx.beginPath();
+  pts.forEach(function(p,i){ if(i===0) ctx.moveTo(p[0],p[1]); else ctx.lineTo(p[0],p[1]); });
+  ctx.closePath();
+}
+function paintLatitudeShading(ctx,pts,w,h){
+  var minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  pts.forEach(function(p){ minX=Math.min(minX,p[0]);maxX=Math.max(maxX,p[0]);minY=Math.min(minY,p[1]);maxY=Math.max(maxY,p[1]); });
+  ctx.save();
+  traceShapePath(ctx,pts);
+  ctx.clip();
+  var step=5;
+  for (var y=minY-2; y<maxY+2; y+=step){
+    var lat = 90-((y+step/2)/h)*180;
+    ctx.fillStyle = landColorAt(lat);
+    ctx.fillRect(minX-2,y,(maxX-minX)+4,step+1);
+  }
+  ctx.restore();
+}
+function drawCloudBlob(ctx,cx,cy,r,alpha){
+  var g = ctx.createRadialGradient(cx,cy,0,cx,cy,r);
+  g.addColorStop(0,'rgba(255,255,255,'+alpha+')');
+  g.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+}
+function drawCloudBlobWrapped(ctx,cx,cy,r,alpha,w){
+  drawCloudBlob(ctx,cx,cy,r,alpha);
+  if (cx-r<0) drawCloudBlob(ctx,cx+w,cy,r,alpha);
+  if (cx+r>w) drawCloudBlob(ctx,cx-w,cy,r,alpha);
+}
+
+
+/* =========================================================================
+   PART E — TEXTURE BUILDERS (earth/cloud/sun/moon) + glow shader + labels
+   ========================================================================= */
+var EARTH_TEX_W=2048, EARTH_TEX_H=1024;
+
+function drawRefLine(ctx,lat,w,h,color,dash){
+  var y = llPx(0,lat,w,h)[1];
+  ctx.save();
+  ctx.strokeStyle = color; ctx.lineWidth = 1.6;
+  ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke();
+  ctx.restore();
+}
+function addSpeckle(ctx,w,h,count){
+  for (var i=0;i<count;i++){
+    var x=Math.random()*w, y=Math.random()*h, r=0.6+Math.random()*2.2;
+    ctx.fillStyle = (Math.random()<0.5?'rgba(0,0,0,':'rgba(255,255,255,')+(Math.random()*0.07).toFixed(3)+')';
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+  }
+}
+
+function buildEarthTextures(){
+  var w=EARTH_TEX_W, h=EARTH_TEX_H;
+  var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+  var ctx=cv.getContext('2d');
+  var sv=document.createElement('canvas'); sv.width=w; sv.height=h;
+  var sctx=sv.getContext('2d');
+
+  var oceanGrad = ctx.createLinearGradient(0,0,0,h);
+  oceanGrad.addColorStop(0,'#0b2d55');
+  oceanGrad.addColorStop(0.5,'#0f4a78');
+  oceanGrad.addColorStop(1,'#0b2d55');
+  ctx.fillStyle = oceanGrad; ctx.fillRect(0,0,w,h);
+  sctx.fillStyle = '#f2f2f2'; sctx.fillRect(0,0,w,h);
+
+  LANDMASSES.forEach(function(shape){
+    var pts = shapePixelPoints(shape,w,h);
+    traceShapePath(ctx,pts); ctx.fillStyle='#355e34'; ctx.fill();
+    paintLatitudeShading(ctx,pts,w,h);
+    ctx.save(); traceShapePath(ctx,pts); ctx.strokeStyle='rgba(8,18,14,0.35)'; ctx.lineWidth=1.3; ctx.stroke(); ctx.restore();
+    traceShapePath(sctx,pts); sctx.fillStyle='#131313'; sctx.fill();
+  });
+
+  var nIceY = llPx(0,83,w,h)[1];
+  ctx.fillStyle='#eef6fb'; ctx.fillRect(0,0,w,nIceY);
+  var sIceY = llPx(0,-64,w,h)[1];
+  ctx.fillStyle='#f4f9fc'; ctx.fillRect(0,sIceY,w,h-sIceY);
+  sctx.fillStyle='#d8d8d8'; sctx.fillRect(0,0,w,nIceY*0.55);
+  sctx.fillStyle='#d8d8d8'; sctx.fillRect(0,sIceY+(h-sIceY)*0.25,w,(h-sIceY)*0.75);
+
+  drawRefLine(ctx,0,w,h,'rgba(255,255,255,0.38)',[]);
+  drawRefLine(ctx,23.44,w,h,'rgba(245,167,66,0.55)',[7,6]);
+  drawRefLine(ctx,-23.44,w,h,'rgba(245,167,66,0.55)',[7,6]);
+  drawRefLine(ctx,66.56,w,h,'rgba(79,200,214,0.42)',[4,5]);
+  drawRefLine(ctx,-66.56,w,h,'rgba(79,200,214,0.42)',[4,5]);
+
+  addSpeckle(ctx,w,h,9000);
+
+  var mapTex = new THREE.CanvasTexture(cv);
+  var specTex = new THREE.CanvasTexture(sv);
+  return {map:mapTex, spec:specTex};
+}
+
+function buildCloudTexture(){
+  var w=1024,h=512;
+  var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+  var ctx=cv.getContext('2d');
+  for (var i=0;i<9;i++) drawCloudBlobWrapped(ctx,Math.random()*w,h*0.12+Math.random()*h*0.76,70+Math.random()*140,0.18,w);
+  for (var i2=0;i2<230;i2++) drawCloudBlobWrapped(ctx,Math.random()*w,Math.random()*h,7+Math.random()*26,0.28+Math.random()*0.3,w);
+  return new THREE.CanvasTexture(cv);
+}
+
+function buildSunTexture(){
+  var w=1024,h=512;
+  var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+  var ctx=cv.getContext('2d');
+  var g=ctx.createLinearGradient(0,0,0,h);
+  g.addColorStop(0,'#fff3c4'); g.addColorStop(0.5,'#ffb347'); g.addColorStop(1,'#ff8c2e');
+  ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+  for (var i=0;i<900;i++){
+    var x=Math.random()*w,y=Math.random()*h,r=4+Math.random()*14;
+    ctx.fillStyle = Math.random()<0.5?'rgba(255,244,200,0.15)':'rgba(200,90,20,0.14)';
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+  }
+  for (var j=0;j<5;j++){
+    var x2=Math.random()*w,y2=Math.random()*h,r2=8+Math.random()*16;
+    ctx.fillStyle='rgba(120,40,10,0.32)';
+    ctx.beginPath(); ctx.arc(x2,y2,r2,0,Math.PI*2); ctx.fill();
+  }
+  return new THREE.CanvasTexture(cv);
+}
+
+function buildMoonTexture(){
+  var w=1024,h=512;
+  var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+  var ctx=cv.getContext('2d');
+  ctx.fillStyle='#b9b9bc'; ctx.fillRect(0,0,w,h);
+  for (var i=0;i<10;i++){
+    var x=Math.random()*w,y=h*0.2+Math.random()*h*0.6,r=30+Math.random()*70;
+    var g=ctx.createRadialGradient(x,y,0,x,y,r);
+    g.addColorStop(0,'rgba(88,88,95,0.55)'); g.addColorStop(1,'rgba(88,88,95,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+  }
+  for (var j=0;j<220;j++){
+    var x2=Math.random()*w,y2=Math.random()*h,r2=2+Math.random()*10;
+    ctx.fillStyle='rgba(58,58,64,0.4)';
+    ctx.beginPath(); ctx.arc(x2,y2,r2,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(222,222,228,0.22)';
+    ctx.beginPath(); ctx.arc(x2-r2*0.25,y2-r2*0.25,r2*0.55,0,Math.PI*2); ctx.fill();
+  }
+  return new THREE.CanvasTexture(cv);
+}
+
+function buildGlowMesh(radius,color,power,opacity,segs){
+  var vert=["varying vec3 vNormal;","varying vec3 vPos;","void main(){",
+    "vNormal = normalize(normalMatrix*normal);",
+    "vec4 mv = modelViewMatrix*vec4(position,1.0);","vPos = mv.xyz;",
+    "gl_Position = projectionMatrix*mv;","}"].join("\n");
+  var frag=["varying vec3 vNormal;","varying vec3 vPos;",
+    "uniform vec3 glowColor;","uniform float glowPower;","uniform float glowOpacity;",
+    "void main(){","vec3 viewDir = normalize(-vPos);",
+    "float rim = 1.0 - max(dot(viewDir, vNormal), 0.0);",
+    "float glow = pow(rim, glowPower);",
+    "gl_FragColor = vec4(glowColor, glow*glowOpacity);","}"].join("\n");
+  var mat = new THREE.ShaderMaterial({
+    uniforms:{glowColor:{value:new THREE.Color(color)},glowPower:{value:power},glowOpacity:{value:opacity}},
+    vertexShader:vert, fragmentShader:frag,
+    side:THREE.BackSide, blending:THREE.AdditiveBlending, transparent:true, depthWrite:false
+  });
+  return new THREE.Mesh(new THREE.SphereGeometry(radius,segs,segs), mat);
+}
+
+/* ---- billboard text-sprite labels used throughout the 3D scene ---- */
+function roundRectPath(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+function makeTextSprite(text,color,fontPx,bg){
+  var cv=document.createElement('canvas');
+  var ctx=cv.getContext('2d');
+  var font=fontPx+"px 'Chakra Petch', sans-serif";
+  ctx.font=font;
+  var mw = ctx.measureText(text).width;
+  var padX=16,padY=10;
+  cv.width=Math.ceil(mw)+padX*2; cv.height=fontPx+padY*2;
+  ctx=cv.getContext('2d'); ctx.font=font;
+  if (bg){ ctx.fillStyle=bg; roundRectPath(ctx,0,0,cv.width,cv.height,10); ctx.fill(); }
+  ctx.fillStyle=color; ctx.textBaseline='middle'; ctx.textAlign='center';
+  ctx.fillText(text, cv.width/2, cv.height/2+1);
+  var tex=new THREE.CanvasTexture(cv); tex.minFilter=THREE.LinearFilter;
+  var mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false});
+  var sprite=new THREE.Sprite(mat);
+  var aspect=cv.width/cv.height;
+  sprite.scale.set(aspect,1,1);
+  sprite.userData.aspect = aspect;
+  return sprite;
+}
+function updateTextSprite(sprite,text,color,fontPx,bg){
+  var cv=document.createElement('canvas');
+  var ctx=cv.getContext('2d');
+  var font=fontPx+"px 'Chakra Petch', sans-serif";
+  ctx.font=font;
+  var mw = ctx.measureText(text).width;
+  var padX=16,padY=10;
+  cv.width=Math.ceil(mw)+padX*2; cv.height=fontPx+padY*2;
+  ctx=cv.getContext('2d'); ctx.font=font;
+  if (bg){ ctx.fillStyle=bg; roundRectPath(ctx,0,0,cv.width,cv.height,10); ctx.fill(); }
+  ctx.fillStyle=color; ctx.textBaseline='middle'; ctx.textAlign='center';
+  ctx.fillText(text, cv.width/2, cv.height/2+1);
+  sprite.material.map.dispose();
+  var tex=new THREE.CanvasTexture(cv); tex.minFilter=THREE.LinearFilter;
+  sprite.material.map = tex;
+  var aspect=cv.width/cv.height;
+  sprite.userData.aspect = aspect;
+  var curH = sprite.scale.y;
+  sprite.scale.set(aspect*curH,curH,1);
+}
+
+
+/* =========================================================================
+   PART F — SCENE ASSEMBLY: Earth (+tilt/axis viz), Sun, Moon, orbit path,
+   distance line. Hierarchy:
+     earthGroup (position = orbit point)
+       -> vertMesh (true vertical, NOT tilted)  + tiltArc + tiltLabel
+       -> earthTiltGroup (rotated 23.44 deg, FIXED direction in space)
+            -> axisGroup (pole line, doesn't spin)
+            -> cloudMesh, glow (rotationally symmetric, tilt irrelevant visually)
+            -> earthSpinGroup (rotates daily)
+                 -> earthMesh, markerPin
+   ========================================================================= */
+var earthGroup, earthTiltGroup, earthSpinGroup, earthMesh, cloudMesh, markerPin;
+var sunMesh, sunGroup, moonGroup, moonMesh, orbitLine, distLine, distLabel, nameLabels={};
+
+function buildEarth(){
+  var tex = buildEarthTextures();
+  var cloudTex = buildCloudTexture();
+
+  earthGroup = new THREE.Object3D();
+
+  var axisLen = CFG.EARTH_R*1.7;
+  var vertGeo = new THREE.CylinderGeometry(0.010,0.010,axisLen*2,8);
+  var vertMesh = new THREE.Mesh(vertGeo, new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.25}));
+  earthGroup.add(vertMesh);
+
+  earthTiltGroup = new THREE.Object3D();
+  earthTiltGroup.rotation.z = CFG.TILT_DEG*Math.PI/180;
+  earthGroup.add(earthTiltGroup);
+
+  var axisGroup = new THREE.Object3D();
+  var axisMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.013,0.013,axisLen*2,8), new THREE.MeshBasicMaterial({color:0xff6a55,transparent:true,opacity:0.9}));
+  axisGroup.add(axisMesh);
+  var nMark = new THREE.Mesh(new THREE.SphereGeometry(0.05,10,10), new THREE.MeshBasicMaterial({color:0xff6a55}));
+  nMark.position.set(0,axisLen,0); axisGroup.add(nMark);
+  var nLabel = makeTextSprite("N","#ff6a55",40); nLabel.position.set(0,axisLen+0.32,0); nLabel.scale.multiplyScalar(0.55); axisGroup.add(nLabel);
+  earthTiltGroup.add(axisGroup);
+
+  earthSpinGroup = new THREE.Object3D();
+  earthTiltGroup.add(earthSpinGroup);
+
+  var geo = buildUVSphere(CFG.EARTH_R,96,64);
+  var mat = new THREE.MeshPhongMaterial({map:tex.map, specularMap:tex.spec, specular:0x40566e, shininess:16});
+  earthMesh = new THREE.Mesh(geo,mat);
+  earthMesh.name = "earthSurface";
+  earthSpinGroup.add(earthMesh);
+
+  cloudMesh = new THREE.Mesh(new THREE.SphereGeometry(CFG.EARTH_R*1.014,64,48), new THREE.MeshPhongMaterial({map:cloudTex,transparent:true,opacity:0.4,depthWrite:false}));
+  earthTiltGroup.add(cloudMesh);
+
+  earthTiltGroup.add(buildGlowMesh(CFG.EARTH_R*1.05, 0x5ad1e8, 2.7, 0.85, 48));
+
+  var pinGeo = new THREE.ConeGeometry(0.08,0.26,12);
+  markerPin = new THREE.Mesh(pinGeo, new THREE.MeshBasicMaterial({color:0xffd27a}));
+  markerPin.visible = false;
+  earthSpinGroup.add(markerPin);
+  var pinGlow = new THREE.Mesh(new THREE.SphereGeometry(0.09,12,12), new THREE.MeshBasicMaterial({color:0xffd27a,transparent:true,opacity:0.55}));
+  pinGlow.position.y = -0.02;
+  markerPin.add(pinGlow);
+
+  buildTiltAngleArc(axisLen*0.6);
+
+  nameLabels.earth = makeTextSprite("โลก","#bfe8ef",42,"rgba(10,16,30,0.55)");
+  nameLabels.earth.position.set(0,-CFG.EARTH_R*1.9,0);
+  nameLabels.earth.scale.multiplyScalar(0.85);
+  earthGroup.add(nameLabels.earth);
+
+  scene.add(earthGroup);
+}
+
+function buildTiltAngleArc(radius){
+  var pts=[];
+  var startDeg=90, endDeg=90+CFG.TILT_DEG, segs=24;
+  for (var i=0;i<=segs;i++){
+    var a=(startDeg+(endDeg-startDeg)*i/segs)*Math.PI/180;
+    pts.push(new THREE.Vector3(radius*Math.cos(a),radius*Math.sin(a),0));
+  }
+  var geo=new THREE.BufferGeometry().setFromPoints(pts);
+  var line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:0xffd27a,transparent:true,opacity:0.95}));
+  earthGroup.add(line);
+  var midDeg=(startDeg+endDeg)/2*Math.PI/180;
+  var label=makeTextSprite("23.44°","#ffd27a",44,"rgba(16,10,4,0.55)");
+  label.position.set(radius*1.32*Math.cos(midDeg), radius*1.32*Math.sin(midDeg), 0);
+  label.scale.multiplyScalar(0.5);
+  earthGroup.add(label);
+}
+
+function buildSun(){
+  sunGroup = new THREE.Object3D();
+  var geo = new THREE.SphereGeometry(CFG.SUN_R,64,64);
+  var mat = new THREE.MeshBasicMaterial({map:buildSunTexture()});
+  sunMesh = new THREE.Mesh(geo,mat);
+  sunGroup.add(sunMesh);
+  sunGroup.add(buildGlowMesh(CFG.SUN_R*1.12, 0xffcf7a, 2.1, 0.95, 48));
+  sunGroup.add(buildGlowMesh(CFG.SUN_R*1.35, 0xff9d42, 3.2, 0.55, 48));
+
+  nameLabels.sun = makeTextSprite("ดวงอาทิตย์","#ffd27a",42,"rgba(30,18,4,0.5)");
+  nameLabels.sun.position.set(0,-CFG.SUN_R*1.55,0);
+  nameLabels.sun.scale.multiplyScalar(2.0);
+  sunGroup.add(nameLabels.sun);
+
+  scene.add(sunGroup);
+}
+
+function buildMoon(){
+  moonGroup = new THREE.Object3D();
+  var geo = new THREE.SphereGeometry(CFG.MOON_R,40,40);
+  var mat = new THREE.MeshPhongMaterial({map:buildMoonTexture(),shininess:2});
+  moonMesh = new THREE.Mesh(geo,mat);
+  moonGroup.add(moonMesh);
+
+  nameLabels.moon = makeTextSprite("ดวงจันทร์","#d8d8e2",36,"rgba(14,14,18,0.5)");
+  nameLabels.moon.position.set(0,-CFG.MOON_R*2.4,0);
+  nameLabels.moon.scale.multiplyScalar(0.6);
+  moonGroup.add(nameLabels.moon);
+
+  scene.add(moonGroup);
+}
+
+function buildOrbitPath(){
+  var pts=[];
+  for (var i=0;i<=240;i++){
+    var N = i/240*365;
+    var pos = earthOrbitPosition(N);
+    pts.push(new THREE.Vector3(pos.x,0,pos.z));
+  }
+  var geo = new THREE.BufferGeometry().setFromPoints(pts);
+  var mat = new THREE.LineBasicMaterial({color:0x5a6a9a,transparent:true,opacity:0.55});
+  orbitLine = new THREE.Line(geo,mat);
+  scene.add(orbitLine);
+
+  var moonPts=[];
+  for (var j=0;j<=64;j++){
+    var a=j/64*Math.PI*2;
+    moonPts.push(new THREE.Vector3(Math.cos(a)*CFG.MOON_ORBIT_R,0,Math.sin(a)*CFG.MOON_ORBIT_R));
+  }
+  var mgeo=new THREE.BufferGeometry().setFromPoints(moonPts);
+  var mline=new THREE.Line(mgeo,new THREE.LineBasicMaterial({color:0x555566,transparent:true,opacity:0.35}));
+  earthGroup.add(mline);
+}
+
+function buildDistanceLine(){
+  var geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0),new THREE.Vector3(0,0,0)]);
+  var mat = new THREE.LineDashedMaterial({color:0xf5a742,dashSize:0.6,gapSize:0.4,transparent:true,opacity:0.75});
+  distLine = new THREE.Line(geo,mat);
+  scene.add(distLine);
+  distLabel = makeTextSprite("149.6 ล้าน กม.","#ffd27a",40,"rgba(20,14,4,0.6)");
+  distLabel.scale.multiplyScalar(1.4);
+  scene.add(distLabel);
+}
+
+
+/* =========================================================================
+   PART G — INTERACTION: click-to-select on the globe, country dropdown,
+   result card rendering, eased camera focus.
+   ========================================================================= */
+var raycaster = new THREE.Raycaster();
+var ndcMouse = new THREE.Vector2();
+var viewSeasonActive = false;
+var selectedLoc = null;
+var camThetaTarget = null, camPhiTarget = null;
+
+function nearestCountry(lat,lon){
+  var best=null,bestD=Infinity;
+  for (var i=0;i<COUNTRIES.length;i++){
+    var c=COUNTRIES[i];
+    var dLat=lat-c[2], dLon=lon-c[3];
+    var cosLat = Math.cos(lat*Math.PI/180);
+    var d = dLat*dLat + dLon*dLon*cosLat*cosLat;
+    if (d<bestD){ bestD=d; best=c; }
+  }
+  return {country:best, distDeg:Math.sqrt(bestD)};
+}
+
+function handleCanvasClick(e){
+  if (!viewSeasonActive) return;
+  var rect = canvas.getBoundingClientRect();
+  ndcMouse.x = ((e.clientX-rect.left)/rect.width)*2-1;
+  ndcMouse.y = -((e.clientY-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(ndcMouse,camera);
+  var hits = raycaster.intersectObject(earthMesh,false);
+  if (hits.length===0 || !hits[0].uv) return;
+  var uv = hits[0].uv;
+  var lon = uv.x*360-180;
+  var lat = 90-uv.y*180;
+  var nc = nearestCountry(lat,lon);
+  var isClose = nc.distDeg < 3;
+  selectLocation(lat,lon, isClose?nc.country[0]:"ตำแหน่งที่เลือก", isClose?nc.country:null);
+}
+
+function selectLocation(lat,lon,displayName,countryRow){
+  selectedLoc = {lat:lat,lon:lon,name:displayName,country:countryRow};
+  var normalDir = latLonToVector3(lat,lon,1).normalize();
+  markerPin.position.copy(latLonToVector3(lat,lon,CFG.EARTH_R*1.006));
+  markerPin.quaternion.copy(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),normalDir));
+  markerPin.visible = true;
+  renderResultCard();
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; });
+}
+
+function renderResultCard(){
+  var card = document.getElementById('resultCard');
+  if (!selectedLoc){ card.classList.add('hidden'); card.innerHTML=""; return; }
+  var N = dayOfYear(APP.date);
+  var info = getSeasonInfo(selectedLoc.lat,N);
+  var latTxt = Math.abs(selectedLoc.lat).toFixed(1)+"°"+(selectedLoc.lat>=0?"N":"S");
+  var lonTxt = Math.abs(selectedLoc.lon).toFixed(1)+"°"+(selectedLoc.lon>=0?"E":"W");
+  var elevTxt = info.noonElevation>0 ? info.noonElevation.toFixed(0)+"°" : "ไม่ขึ้นเลย";
+  card.innerHTML =
+    '<div class="result-head"><span class="result-place">'+escapeHtml(selectedLoc.name)+'</span></div>'+
+    '<div class="result-coords">'+latTxt+', '+lonTxt+'</div>'+
+    '<div class="result-season" style="color:'+info.color+';border-color:'+info.color+'66;background:'+info.color+'1a;">'+info.icon+' '+info.label+'</div>'+
+    '<p class="result-desc">'+info.desc+'</p>'+
+    '<div class="result-grid">'+
+      '<div class="result-metric"><span class="rm-label">ความยาวกลางวัน</span><span class="rm-value">'+info.dayLength.toFixed(1)+' ชม.</span></div>'+
+      '<div class="result-metric"><span class="rm-label">มุมเงยดวงอาทิตย์ (เที่ยงวัน)</span><span class="rm-value">'+elevTxt+'</span></div>'+
+    '</div>';
+  card.classList.remove('hidden');
+}
+
+function focusCameraOn(lat,lon){
+  var local = latLonToVector3(lat,lon,1);
+  earthSpinGroup.updateMatrixWorld(true);
+  var world = local.clone().applyMatrix4(earthSpinGroup.matrixWorld).sub(earthGroup.position);
+  camThetaTarget = Math.atan2(world.x, world.z);
+  var horiz = Math.hypot(world.x, world.z);
+  camPhiTarget = Math.PI/2 - Math.atan2(world.y, horiz);
+  if (camCtl.radius > 22) camCtl.radius = 15;
+}
+function angleDiff(target,current){
+  var d = target-current;
+  while (d>Math.PI) d -= Math.PI*2;
+  while (d<-Math.PI) d += Math.PI*2;
+  return d;
+}
+
+function setViewSeasonButtonState(active){
+  viewSeasonActive = active;
+  var btn = document.getElementById('viewSeasonBtn');
+  if (active){
+    btn.classList.add('active');
+    btn.innerHTML = '<span class="pulse"></span> กำลังเลือกจุด — แตะที่โลกได้เลย';
+    canvas.classList.add('select-mode');
+    document.getElementById('dragHint').textContent = 'แตะจุดใดก็ได้บนโลกเพื่อดูฤดู · ลากเพื่อหมุนโลก';
+  } else {
+    btn.classList.remove('active');
+    btn.innerHTML = '🌍 กดเพื่อเลือกจุดบนโลก';
+    canvas.classList.remove('select-mode');
+    document.getElementById('dragHint').textContent = 'ลากเพื่อหมุนมุมมอง · เลื่อนล้อ/บีบนิ้วเพื่อซูม';
+  }
+}
+
+function populateCountrySelect(){
+  var sel = document.getElementById('countrySelect');
+  var byContinent = {};
+  COUNTRIES.forEach(function(c){ (byContinent[c[4]]=byContinent[c[4]]||[]).push(c); });
+  ['AS','EU','AF','NA','SA','OC'].forEach(function(code){
+    var list = byContinent[code]; if (!list) return;
+    list = list.slice().sort(function(a,b){ return a[0]<b[0]?-1:(a[0]>b[0]?1:0); });
+    var og = document.createElement('optgroup');
+    og.label = CONTINENT_NAMES[code];
+    list.forEach(function(c){
+      var opt=document.createElement('option');
+      opt.value=c[0]; opt.textContent=c[0];
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
+  });
+  sel.addEventListener('change', function(){
+    if (!sel.value) return;
+    var c = null;
+    for (var i=0;i<COUNTRIES.length;i++){ if (COUNTRIES[i][0]===sel.value){ c=COUNTRIES[i]; break; } }
+    if (!c) return;
+    setViewSeasonButtonState(true);
+    selectLocation(c[2],c[3],c[0],c);
+    focusCameraOn(c[2],c[3]);
+  });
+}
+
+
+/* =========================================================================
+   PART H — APP STATE, YEAR DIAL, STAT READOUTS, TIME CONTROLS
+   ========================================================================= */
+var APP = {date:new Date(), playing:false, playSpeed:2};
+
+function dateToInputValue(d){
+  function p2(n){ return (n<10?"0":"")+n; }
+  return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate());
+}
+function timeToInputValue(d){
+  function p2(n){ return (n<10?"0":"")+n; }
+  return p2(d.getHours())+":"+p2(d.getMinutes());
+}
+
+function updateStats(){
+  var N = dayOfYear(APP.date);
+  var km = sunDistanceKm(N);
+  document.getElementById('statDistance').textContent = (km/1e6).toFixed(1)+" ล้าน กม.";
+  var pct = (km-CFG.AU_KM)/CFG.AU_KM*100;
+  document.getElementById('statDistanceSub').textContent = (pct>=0?"ไกลกว่า":"ใกล้กว่า")+"ค่าเฉลี่ย "+Math.abs(pct).toFixed(2)+"%";
+  var traveled = (N/365.25*CFG.ORBIT_PATH_KM/1e6);
+  document.getElementById('statOrbitProgress').textContent = "เดินทางแล้ว "+traveled.toFixed(0)+" ล้าน กม. ปีนี้";
+}
+
+/* ---- circular year dial: signature control, mirrors the shape of the orbit itself ---- */
+var SVGNS = "http://www.w3.org/2000/svg";
+var DIAL_CX=95, DIAL_CY=95, DIAL_R=76;
+var dialKnob, dialKnobGlow, dialProgressArc;
+
+function svgEl(tag,attrs){
+  var el=document.createElementNS(SVGNS,tag);
+  for (var k in attrs) el.setAttribute(k,attrs[k]);
+  return el;
+}
+function dayToAngleRad(N){ return -Math.PI/2 + (N/365)*Math.PI*2; }
+function angleRadToDay(a){
+  var norm = a+Math.PI/2;
+  norm = ((norm%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
+  return norm/(Math.PI*2)*365;
+}
+function dialPoint(N,r){
+  var a = dayToAngleRad(N);
+  return [DIAL_CX+r*Math.cos(a), DIAL_CY+r*Math.sin(a)];
+}
+function arcPathD(n0,n1,r){
+  var a0=dayToAngleRad(n0), a1=dayToAngleRad(n1);
+  var large = (a1-a0)>Math.PI ? 1:0;
+  var p0=[DIAL_CX+r*Math.cos(a0),DIAL_CY+r*Math.sin(a0)];
+  var p1=[DIAL_CX+r*Math.cos(a1),DIAL_CY+r*Math.sin(a1)];
+  return "M "+p0[0].toFixed(2)+" "+p0[1].toFixed(2)+" A "+r+" "+r+" 0 "+large+" 1 "+p1[0].toFixed(2)+" "+p1[1].toFixed(2);
+}
+
+function buildYearDial(){
+  var svg = document.getElementById('yearDial');
+  svg.appendChild(svgEl('circle',{cx:DIAL_CX,cy:DIAL_CY,r:DIAL_R,fill:'none',stroke:'rgba(255,255,255,0.10)','stroke-width':11}));
+
+  var segs = [
+    [SEASON_BOUND.marEq,SEASON_BOUND.junSol,'#8bd17c'],
+    [SEASON_BOUND.junSol,SEASON_BOUND.sepEq,'#f5a742'],
+    [SEASON_BOUND.sepEq,SEASON_BOUND.decSol,'#e08a3e'],
+    [1,SEASON_BOUND.marEq,'#7ec8e3'],
+    [SEASON_BOUND.decSol,365,'#7ec8e3']
+  ];
+  segs.forEach(function(s){
+    var p = svgEl('path',{d:arcPathD(s[0],s[1],DIAL_R),fill:'none',stroke:s[2],'stroke-width':11,opacity:0.22});
+    svg.appendChild(p);
+  });
+
+  dialProgressArc = svgEl('path',{d:arcPathD(1,dayOfYear(APP.date),DIAL_R),fill:'none',stroke:'#ffd27a','stroke-width':4,'stroke-linecap':'round'});
+  svg.appendChild(dialProgressArc);
+
+  [[SEASON_BOUND.marEq,"20 มี.ค."],[SEASON_BOUND.junSol,"21 มิ.ย."],[SEASON_BOUND.sepEq,"23 ก.ย."],[SEASON_BOUND.decSol,"21 ธ.ค."]].forEach(function(t){
+    var p1=dialPoint(t[0],DIAL_R-6), p2=dialPoint(t[0],DIAL_R+6);
+    svg.appendChild(svgEl('line',{x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1],stroke:'#c9cfe6',opacity:0.55,'stroke-width':2}));
+  });
+
+  var kp = dialPoint(dayOfYear(APP.date),DIAL_R);
+  dialKnobGlow = svgEl('circle',{cx:kp[0],cy:kp[1],r:14,fill:'#ffd27a',opacity:0.22});
+  svg.appendChild(dialKnobGlow);
+  dialKnob = svgEl('circle',{cx:kp[0],cy:kp[1],r:8,fill:'#ffd27a',stroke:'#1a1206','stroke-width':2});
+  svg.appendChild(dialKnob);
+
+  var dragging=false;
+  function angleFromEvent(e){
+    var rect = svg.getBoundingClientRect();
+    var x=(e.clientX-rect.left)*(190/rect.width), y=(e.clientY-rect.top)*(190/rect.height);
+    return Math.atan2(y-DIAL_CY,x-DIAL_CX);
+  }
+  function updateFromAngle(a){
+    var N = Math.round(angleRadToDay(a));
+    if (N<1) N=1; if (N>365) N=365;
+    setAppDate(new Date(APP.date.getFullYear(),0,N,APP.date.getHours(),APP.date.getMinutes()));
+    clearQuickJumpActive();
+  }
+  svg.addEventListener('pointerdown', function(e){ dragging=true; svg.setPointerCapture(e.pointerId); updateFromAngle(angleFromEvent(e)); });
+  svg.addEventListener('pointermove', function(e){ if (dragging) updateFromAngle(angleFromEvent(e)); });
+  svg.addEventListener('pointerup', function(){ dragging=false; });
+  svg.addEventListener('pointercancel', function(){ dragging=false; });
+}
+
+function updateDial(){
+  if (!dialKnob) return;
+  var N = dayOfYear(APP.date);
+  var kp = dialPoint(N,DIAL_R);
+  dialKnob.setAttribute('cx',kp[0]); dialKnob.setAttribute('cy',kp[1]);
+  dialKnobGlow.setAttribute('cx',kp[0]); dialKnobGlow.setAttribute('cy',kp[1]);
+  dialProgressArc.setAttribute('d', arcPathD(1,N,DIAL_R));
+  document.getElementById('dialDate').innerHTML = formatThaiDateShort(APP.date)+'<span class="yr"> พ.ศ. '+toBuddhistYear(APP.date.getFullYear())+'</span>';
+}
+
+function clearQuickJumpActive(){
+  var qb = document.querySelectorAll('.quickjump button');
+  for (var i=0;i<qb.length;i++) qb[i].classList.remove('active');
+}
+
+function setAppDate(newDate){
+  APP.date = newDate;
+  document.getElementById('dateInput').value = dateToInputValue(newDate);
+  document.getElementById('timeInput').value = timeToInputValue(newDate);
+  updateStats();
+  updateDial();
+  if (selectedLoc) renderResultCard();
+}
+
+
+/* =========================================================================
+   PART I — PER-FRAME UPDATES, REMAINING UI WIRING, MAIN LOOP, INIT
+   ========================================================================= */
+function updateSceneForDate(){
+  var hourFrac = (APP.date.getHours()+APP.date.getMinutes()/60)/24;
+  var N = dayOfYear(APP.date) + hourFrac;
+
+  var pos = earthOrbitPosition(N);
+  earthGroup.position.set(pos.x,0,pos.z);
+  earthSpinGroup.rotation.y = hourFrac*Math.PI*2 + Math.PI;
+  cloudMesh.rotation.y = clockTime*0.006;
+
+  var moonAngle = (N/CFG.MOON_PERIOD_DAYS)*Math.PI*2;
+  var mx = Math.cos(moonAngle)*CFG.MOON_ORBIT_R, mz = Math.sin(moonAngle)*CFG.MOON_ORBIT_R;
+  var my = Math.sin(moonAngle*0.9)*0.3;
+  moonGroup.position.set(earthGroup.position.x+mx, my, earthGroup.position.z+mz);
+  moonMesh.rotation.y = moonAngle;
+
+  var dp1 = earthGroup.position.clone();
+  distLine.geometry.setFromPoints([new THREE.Vector3(0,0,0), dp1]);
+  distLine.computeLineDistances();
+  distLabel.position.copy(dp1).multiplyScalar(0.5).add(new THREE.Vector3(0,1.7,0));
+  var km = sunDistanceKm(N);
+  if (distLabel.userData.lastKm===undefined || Math.abs(distLabel.userData.lastKm-km)>80000){
+    updateTextSprite(distLabel,(km/1e6).toFixed(1)+" ล้าน กม.","#ffd27a",40,"rgba(20,14,4,0.6)");
+    var asp = distLabel.material.map.image.width/distLabel.material.map.image.height;
+    distLabel.scale.set(asp*1.4,1.4,1);
+    distLabel.userData.lastKm = km;
+  }
+
+  camCtl.target.copy(earthGroup.position);
+}
+
+function wireTimeControls(){
+  document.getElementById('dateInput').addEventListener('change', function(e){
+    var p=e.target.value.split('-'); if (p.length!==3) return;
+    setAppDate(new Date(+p[0],+p[1]-1,+p[2],APP.date.getHours(),APP.date.getMinutes()));
+    clearQuickJumpActive();
+  });
+  document.getElementById('timeInput').addEventListener('change', function(e){
+    var p=e.target.value.split(':'); if (p.length!==2) return;
+    setAppDate(new Date(APP.date.getFullYear(),APP.date.getMonth(),APP.date.getDate(),+p[0],+p[1]));
+  });
+
+  var QUICK = {mar:[3,20],jun:[6,21],sep:[9,23],dec:[12,21]};
+  var qbtns = document.querySelectorAll('.quickjump button');
+  for (var i=0;i<qbtns.length;i++){
+    (function(btn){
+      btn.addEventListener('click', function(){
+        var md = QUICK[btn.getAttribute('data-jump')];
+        setAppDate(new Date(APP.date.getFullYear(),md[0]-1,md[1],12,0));
+        clearQuickJumpActive();
+        btn.classList.add('active');
+      });
+    })(qbtns[i]);
+  }
+
+  document.getElementById('playBtn').addEventListener('click', function(){
+    APP.playing = !APP.playing;
+    this.classList.toggle('playing',APP.playing);
+    document.getElementById('playIcon').textContent = APP.playing ? '⏸' : '▶';
+  });
+  document.getElementById('speedRange').addEventListener('input', function(e){
+    APP.playSpeed = parseInt(e.target.value,10);
+  });
+
+  document.getElementById('viewSeasonBtn').addEventListener('click', function(){
+    setViewSeasonButtonState(!viewSeasonActive);
+  });
+}
+
+function animate(t){
+  requestAnimationFrame(animate);
+  var dt = lastFrameMs ? Math.min((t-lastFrameMs)/1000,0.1) : 0.016;
+  lastFrameMs = t;
+  clockTime += dt;
+
+  if (APP.playing){
+    var daysPerSec = [0.6,2.2,9,32][APP.playSpeed-1] || 2.2;
+    APP.date = new Date(APP.date.getTime()+daysPerSec*dt*86400000);
+    document.getElementById('dateInput').value = dateToInputValue(APP.date);
+    document.getElementById('timeInput').value = timeToInputValue(APP.date);
+    updateStats(); updateDial();
+    if (selectedLoc) renderResultCard();
+  }
+
+  updateSceneForDate();
+
+  if (camThetaTarget!==null){
+    var dth = angleDiff(camThetaTarget,camCtl.theta);
+    camCtl.theta += dth*0.09;
+    if (Math.abs(dth)<0.008) camThetaTarget=null;
+  }
+  if (camPhiTarget!==null){
+    var dph = camPhiTarget-camCtl.phi;
+    camCtl.phi += dph*0.09;
+    if (Math.abs(dph)<0.004) camPhiTarget=null;
+  }
+  updateCameraFromCtl();
+  renderer.render(scene,camera);
+}
+
+function init(){
+  initThree();
+  initCameraControls();
+  buildEarth();
+  buildSun();
+  buildOrbitPath();
+  buildMoon();
+  buildDistanceLine();
+  populateCountrySelect();
+  buildYearDial();
+  wireTimeControls();
+
+  setAppDate(APP.date);
+  updateSceneForDate();
+  updateCameraFromCtl();
+
+  requestAnimationFrame(animate);
+
+  setTimeout(function(){
+    var ls = document.getElementById('loadScreen');
+    if (!ls) return;
+    ls.style.opacity='0';
+    setTimeout(function(){ ls.style.display='none'; },650);
+  },260);
+}
+
+function safeInit(){
+  try { init(); }
+  catch(err){
+    console.error(err);
+    var ls = document.getElementById('loadScreen');
+    if (ls) ls.innerHTML = '<p style="color:#f2765a;max-width:270px;text-align:center;padding:0 20px;line-height:1.6;">เกิดข้อผิดพลาดในการโหลดแบบจำลอง กรุณาลองรีเฟรชหน้าเว็บ<br><span style="font-size:10px;color:#8891b0;">'+(err&&err.message?err.message:'')+'</span></p>';
+  }
+}
+if (document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded', safeInit);
+} else {
+  safeInit();
+}
+</script>
 </body>
 </html>
-
