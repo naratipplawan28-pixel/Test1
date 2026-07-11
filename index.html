@@ -206,6 +206,7 @@ button,input,select{font-family:inherit;}
   background:linear-gradient(160deg,rgba(79,200,214,0.09),rgba(255,255,255,0.02));
   padding:15px 15px 16px;animation:fadeIn .35s ease;
 }
+.hidden{ display:none !important; }
 .result-card.hidden{display:none;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 .result-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:2px;}
@@ -236,9 +237,10 @@ button,input,select{font-family:inherit;}
 /* loading */
 #loadScreen{
   position:fixed;inset:0;z-index:100;background:var(--bg-void);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;
   transition:opacity .6s ease;
 }
+#loadScreen.visible{ display:flex; }
 #loadScreen .load-orb{
   width:54px;height:54px;border-radius:50%;
   background:radial-gradient(circle at 35% 30%,var(--sun-bright),var(--sun) 55%,#a85f18 100%);
@@ -252,7 +254,119 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{
   outline:2px solid var(--earth-teal);outline-offset:2px;
 }
 
-@media (prefers-reduced-motion:reduce){
+/* ---------- screen manager ---------- */
+.screen{ display:none; position:fixed; inset:0; }
+.screen.active{ display:block; }
+#app.screen{ display:none; }
+#app.screen.active{ display:flex; }
+
+.back-btn{ margin-right:4px; }
+
+/* ---------- home ---------- */
+#screen-home.active{ display:flex; }
+.home-stage{
+  width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:32px 24px;gap:6px;
+  background:radial-gradient(ellipse at 50% 30%,rgba(79,200,214,0.09),transparent 60%),var(--bg-void);
+}
+.home-illustration{ width:220px;max-width:60vw;margin-bottom:8px;filter:drop-shadow(0 0 26px rgba(245,167,66,0.28)); }
+.home-illust-svg{ width:100%;height:auto;display:block; }
+.home-title{
+  font-family:var(--font-display);font-weight:700;font-size:clamp(30px,7vw,44px);
+  margin:6px 0 4px;letter-spacing:1px;
+  background:linear-gradient(135deg,var(--sun-bright),var(--earth-teal));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.home-sub{ color:var(--text-muted);font-size:14px;max-width:420px;line-height:1.7;margin:0 0 22px; }
+.home-actions{ display:flex;flex-direction:column;gap:10px;width:100%;max-width:280px; }
+.home-btn{ width:100%; }
+
+/* ---------- how to ---------- */
+.howto-stage{
+  width:100%;height:100%;overflow-y:auto;display:flex;flex-direction:column;align-items:center;
+  padding:40px 24px 60px;background:var(--bg-void);
+}
+.howto-title{ font-family:var(--font-display);font-size:22px;margin:0 0 22px; }
+.howto-list{
+  max-width:520px;width:100%;color:var(--text-muted);font-size:13.5px;line-height:1.85;
+  padding-left:22px;margin:0 0 26px;display:flex;flex-direction:column;gap:14px;
+}
+.howto-list li{ padding-left:4px; }
+.howto-list b{ color:var(--text-primary); }
+.howto-stage .primary-btn{ max-width:220px; }
+
+/* ---------- menu ---------- */
+#screen-menu.active{ display:flex; }
+.menu-stage{
+  width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px 24px;gap:8px;background:var(--bg-void);
+  background:radial-gradient(ellipse at 50% 20%,rgba(245,167,66,0.08),transparent 55%),var(--bg-void);
+}
+.menu-title{ font-family:var(--font-display);font-size:26px;margin:0; }
+.menu-sub{ color:var(--text-dim);font-size:13px;margin:0 0 26px; }
+.menu-cards{ display:flex;gap:16px;flex-wrap:wrap;justify-content:center;max-width:640px;margin-bottom:26px; }
+.menu-card{
+  width:270px;background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius-lg);
+  padding:26px 20px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;
+  cursor:pointer;transition:transform .18s,border-color .18s,background .18s;color:var(--text-primary);
+}
+.menu-card:hover{ transform:translateY(-3px);border-color:var(--line-strong);background:rgba(255,255,255,0.05); }
+.menu-card-icon{ font-size:34px; }
+.menu-card-title{ font-family:var(--font-display);font-size:15.5px;font-weight:600; }
+.menu-card-desc{ font-size:12px;color:var(--text-muted);line-height:1.6; }
+.menu-home-btn{ max-width:200px; }
+
+/* ---------- game ---------- */
+#screen-game.active{ display:flex;flex-direction:column; }
+.game-topbar{
+  flex:none;display:flex;align-items:center;gap:12px;padding:16px 20px;
+  border-bottom:1px solid var(--line);background:var(--bg-deep);
+}
+.game-progress{ font-family:var(--font-display);font-size:13px;color:var(--text-muted); }
+.game-score{ margin-left:auto;font-family:var(--font-display);font-size:14px;color:var(--sun-bright); }
+.game-body{ flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:22px 18px 40px;background:var(--bg-void); }
+.question-text{ font-family:var(--font-display);font-size:19px;text-align:center;max-width:440px;margin:0 0 18px;line-height:1.5; }
+.arrange-static-hint{ text-align:center;font-size:11.5px;color:var(--text-muted);max-width:340px;line-height:1.6;margin:0 0 14px; }
+.arrange-static-hint b{ color:var(--sun-bright); }
+.start-question-panel{ display:flex;flex-direction:column;align-items:center;gap:16px;padding:18px 0 6px; }
+.start-question-panel .primary-btn{ width:min(280px,80vw); }
+.arrange-panel{ display:flex;flex-direction:column;align-items:center; }
+.light-btn{ margin:0 0 14px;width:min(320px,88vw); }
+.arrange-wrap{ position:relative;width:min(320px,88vw);margin-bottom:12px; }
+#arrangeSvg{ width:100%;height:auto;display:block;touch-action:none; }
+.arrange-live{
+  text-align:center;font-size:12.5px;color:var(--earth-teal);min-height:34px;max-width:320px;
+  line-height:1.55;margin:0 0 16px;background:rgba(79,200,214,0.08);border:1px solid rgba(79,200,214,0.25);
+  border-radius:var(--radius-sm);padding:8px 14px;
+}
+.game-question-panel .primary-btn{ width:min(320px,88vw); }
+
+.game-feedback-panel{ width:min(420px,92vw);display:flex;flex-direction:column;align-items:stretch;gap:16px; }
+.feedback-checks{ display:flex;flex-direction:column;gap:10px; }
+.feedback-check{
+  display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--bg-card);font-size:13px;
+}
+.feedback-check.pass{ border-color:rgba(139,209,124,0.4);background:rgba(139,209,124,0.08);color:#bfe8b4; }
+.feedback-check.fail{ border-color:rgba(242,118,90,0.4);background:rgba(242,118,90,0.08);color:#f7b3a4; }
+.feedback-check .fc-icon{ font-size:15px; }
+.feedback-explain{ color:var(--text-muted);font-size:12.5px;line-height:1.7;background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px 16px; }
+
+.game-summary-panel{ width:min(420px,92vw);display:flex;flex-direction:column;align-items:center;text-align:center;gap:18px;margin-top:20px; }
+.summary-tier{ font-size:52px; }
+.summary-tier .tier-label{ display:block;font-family:var(--font-display);font-size:19px;margin-top:6px;color:var(--sun-bright); }
+.summary-stats{ display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;width:100%; }
+.summary-stats .stat{ background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 8px; }
+.summary-stats .stat b{ display:block;font-family:var(--font-display);font-size:16px;margin-bottom:3px; }
+.summary-stats .stat span{ font-size:10px;color:var(--text-dim); }
+.summary-actions{ display:flex;flex-direction:column;gap:10px;width:100%;max-width:260px; }
+
+@media (max-width:520px){
+  .menu-cards{ flex-direction:column;align-items:center; }
+  .menu-card{ width:100%;max-width:320px; }
+}
+
+
   .primary-btn .pulse,#loadScreen .load-orb{animation:none;}
 }
 
@@ -274,11 +388,125 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{
 
 <div id="loadScreen"><div class="load-orb"></div><p>กำลังสร้างระบบสุริยะ…</p></div>
 
-<div id="app">
+<!-- ============== HOME ============== -->
+<div id="screen-home" class="screen active">
+  <div class="home-stage">
+    <div class="home-illustration">
+      <svg viewBox="0 0 200 200" class="home-illust-svg">
+        <defs>
+          <radialGradient id="homeSunGrad" cx="35%" cy="30%">
+            <stop offset="0%" stop-color="#ffd27a"/><stop offset="60%" stop-color="#f5a742"/><stop offset="100%" stop-color="#a85f18"/>
+          </radialGradient>
+          <radialGradient id="homeEarthGrad" cx="35%" cy="30%">
+            <stop offset="0%" stop-color="#8fe3ec"/><stop offset="70%" stop-color="#4fc8d6"/><stop offset="100%" stop-color="#1c6570"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="100" cy="100" rx="80" ry="32" fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="1.5" stroke-dasharray="3 5"/>
+        <circle cx="100" cy="100" r="27" fill="url(#homeSunGrad)"/>
+        <circle r="9" fill="url(#homeEarthGrad)">
+          <animateMotion dur="16s" repeatCount="indefinite" path="M180,100 A80,32 0 1,1 20,100 A80,32 0 1,1 180,100"/>
+        </circle>
+      </svg>
+    </div>
+    <h1 class="home-title">การเกิดฤดู</h1>
+    <p class="home-sub">ทำความเข้าใจว่าทำไมโลกจึงมีฤดูกาล ผ่านแบบจำลอง 3 มิติ และเกมทดสอบความเข้าใจ</p>
+    <div class="home-actions">
+      <button class="primary-btn home-btn" id="homeEnterBtn">เข้าชม</button>
+      <button class="ghost-btn home-btn" id="homeHowtoBtn">คำแนะนำการเล่น</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== HOW TO ============== -->
+<div id="screen-howto" class="screen">
+  <div class="howto-stage">
+    <h2 class="howto-title">คำแนะนำการเล่น</h2>
+    <ol class="howto-list">
+      <li><b>แบบจำลองการเกิดฤดูกาล</b> — หมุนกล้องดูระบบสุริยะ เลือกวันที่/เวลา แล้วกดปุ่มดูฤดูเพื่อคลิกจุดใดก็ได้บนโลก หรือเลือกประเทศ เพื่อดูว่าที่นั่นเป็นฤดูอะไร</li>
+      <li><b>โหมดเกม</b> — ระบบจะสุ่มโจทย์ เช่น "ประเทศไทยเป็นฤดูร้อน" หรือ "วันครีษมายัน"</li>
+      <li>สิ่งเดียวที่ต้องทำคือ <b>ลากลูกโลกไปตามวงโคจร</b> ไปยังตำแหน่งที่คิดว่าตรงกับโจทย์ (มี 4 จุดให้อ้างอิงบนวงโคจร) — สังเกตว่า <b>ลูกศรสีแดง (แกนโลก) จะชี้ทิศทางเดิมเสมอ ไม่หมุนตาม</b> ส่วนข้อความใต้วงโคจรจะบอกผลแบบสดว่าตอนนี้ซีกโลกไหนเป็นฤดูอะไร</li>
+      <li>ลากไปเรื่อย ๆ จนพอใจ แล้วกด "ตรวจคำตอบ" ระบบจะบอกว่าถูกหรือผิด พร้อมคำอธิบาย เมื่อครบ 5 ข้อจะสรุปคะแนนและระดับความเข้าใจ</li>
+    </ol>
+    <button class="primary-btn" id="howtoBackBtn">เข้าใจแล้ว</button>
+  </div>
+</div>
+
+<!-- ============== MENU ============== -->
+<div id="screen-menu" class="screen">
+  <div class="menu-stage">
+    <h2 class="menu-title">เมนูหลัก</h2>
+    <p class="menu-sub">เลือกสิ่งที่อยากทำ</p>
+    <div class="menu-cards">
+      <button class="menu-card" id="menuModelBtn">
+        <span class="menu-card-icon">📖</span>
+        <span class="menu-card-title">แบบจำลองการเกิดฤดูกาล</span>
+        <span class="menu-card-desc">ทดลองหมุนโลก ปรับวันเวลา และดูฤดูกาลทั่วโลกแบบโต้ตอบ 3 มิติ</span>
+      </button>
+      <button class="menu-card" id="menuGameBtn">
+        <span class="menu-card-icon">🎮</span>
+        <span class="menu-card-title">เล่นเกม</span>
+        <span class="menu-card-desc">ทดสอบความเข้าใจ จัดตำแหน่งโลกและแกนเอียงให้ตรงกับโจทย์ที่สุ่มมา</span>
+      </button>
+    </div>
+    <button class="ghost-btn menu-home-btn" id="menuHomeBtn">← กลับหน้าแรก</button>
+  </div>
+</div>
+
+<!-- ============== GAME ============== -->
+<div id="screen-game" class="screen">
+  <header class="game-topbar">
+    <button class="icon-btn back-btn" id="gameBackBtn" aria-label="ออกจากเกม">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="game-progress" id="gameProgress">โจทย์ 1/5</div>
+    <div class="game-score" id="gameScoreTop">⭐ 0</div>
+  </header>
+
+  <div class="game-body">
+    <div class="game-question-panel" id="gameQuestionPanel">
+      <h2 class="question-text" id="questionText">โจทย์</h2>
+
+      <div class="start-question-panel" id="startQuestionPanel">
+        <p class="arrange-static-hint">คิดในใจก่อนว่าคำตอบคืออะไร แล้วกดเริ่มเพื่อลากโลกไปวางตำแหน่ง</p>
+        <button class="primary-btn" id="startQuestionBtn">▶ เริ่มทำโจทย์</button>
+      </div>
+
+      <div class="arrange-panel hidden" id="arrangePanel">
+        <p class="arrange-static-hint">แกนโลก (ลูกศรแดง) ชี้ทิศทางเดิมเสมอ ไม่ว่าจะลากไปตรงไหน — <b>ลากลูกโลกไปตามวงโคจร</b> ไปยังตำแหน่งที่ถูกต้อง</p>
+        <div class="arrange-wrap">
+          <svg id="arrangeSvg" viewBox="0 0 320 320"></svg>
+        </div>
+        <p class="arrange-live" id="arrangeLive">กดปุ่ม "เปิดแสงอาทิตย์" เพื่อดูว่าซีกโลกไหนได้รับแสง</p>
+        <button class="ghost-btn light-btn" id="lightToggleBtn">💡 เปิดแสงอาทิตย์</button>
+        <button class="primary-btn" id="checkAnswerBtn">ตรวจคำตอบ</button>
+      </div>
+    </div>
+
+    <div class="game-feedback-panel hidden" id="gameFeedbackPanel">
+      <div class="feedback-checks" id="feedbackChecks"></div>
+      <p class="feedback-explain" id="feedbackExplain"></p>
+      <button class="primary-btn" id="nextQuestionBtn">ข้อถัดไป →</button>
+    </div>
+
+    <div class="game-summary-panel hidden" id="gameSummaryPanel">
+      <div class="summary-tier" id="summaryTier"></div>
+      <div class="summary-stats" id="summaryStats"></div>
+      <div class="summary-actions">
+        <button class="primary-btn" id="playAgainBtn">เล่นใหม่</button>
+        <button class="ghost-btn" id="backToMenuBtn">กลับเมนูหลัก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="app" class="screen">
   <canvas id="scene"></canvas>
 
   <header class="topbar">
     <div class="brand">
+      <button class="icon-btn back-btn" id="modelBackBtn" aria-label="กลับเมนูหลัก">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
       <span class="brand-mark"></span>
       <div class="brand-text">
         <h1>ทำไมโลกจึงมีฤดูกาล</h1>
@@ -1673,12 +1901,340 @@ function safeInit(){
     if (ls) ls.innerHTML = '<p style="color:#f2765a;max-width:270px;text-align:center;padding:0 20px;line-height:1.6;">เกิดข้อผิดพลาดในการโหลดแบบจำลอง กรุณาลองรีเฟรชหน้าเว็บ<br><span style="font-size:10px;color:#8891b0;">'+(err&&err.message?err.message:'')+'</span></p>';
   }
 }
-if (document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded', safeInit);
-} else {
-  safeInit();
+
+/* =========================================================================
+   PART J — SCREEN MANAGER (home / howto / menu / model / game)
+   Model (the 3D simulator) is heavy, so it is only built the first time
+   the person actually navigates to it.
+   ========================================================================= */
+function showScreen(name){
+  var all = document.querySelectorAll('.screen');
+  for (var i=0;i<all.length;i++) all[i].classList.remove('active');
+  var target = document.getElementById(name==='model' ? 'app' : 'screen-'+name);
+  if (target) target.classList.add('active');
+  if (name==='model') ensureModelInit();
 }
+
+var modelInitStarted = false;
+function ensureModelInit(){
+  if (modelInitStarted) return;
+  modelInitStarted = true;
+  var ls = document.getElementById('loadScreen');
+  if (ls){ ls.classList.add('visible'); ls.style.opacity='1'; ls.style.display='flex'; }
+  setTimeout(function(){ safeInit(); }, 30);
+}
+
+/* =========================================================================
+   PART K — GAME ENGINE: random question -> "เริ่มทำโจทย์" -> drag Earth along
+   its ELLIPTICAL orbit (Sun sits at one focus, matching real orbital
+   mechanics) -> optional "เปิดแสงอาทิตย์" reveal -> check answer.
+   The orbit is deliberately drawn with exaggerated eccentricity and labels
+   Perihelion (~3 Jan, closest) and Aphelion (~4 Jul, farthest) right next to
+   the Dec/Jun solstices, so the person can see for themselves that distance
+   from the Sun does NOT line up with hot/cold — axial tilt does.
+   Earth's 23.5 deg tilt is fixed and pre-set; only its orbital position is
+   ever draggable.
+   ========================================================================= */
+var GAME_CX=160, GAME_CY=150, GAME_EARTH_R=15, GAME_SUN_R=26;
+var ORBIT_A_GAME=94, ORBIT_E_GAME=0.42, THETA_PERI_GAME=193; // exaggerated ellipse, for visibility only
+var gameEls = {};
+var gameState = {earthAngle:0, round:0, total:5, score:0, correctCount:0, startTime:0, currentQ:null, dragging:false, lightOn:false, started:false};
+
+var ANSWER_SLOTS = [
+  {angle:0,   key:'jun', label:'ครีษมายัน',    sub:'21 มิ.ย.', icon:'☀️'},
+  {angle:93,  key:'sep', label:'ศารทวิษุวัต',  sub:'23 ก.ย.',  icon:'🍂'},
+  {angle:181, key:'dec', label:'เหมายัน',      sub:'21 ธ.ค.',  icon:'❄️'},
+  {angle:268, key:'mar', label:'วสันตวิษุวัต', sub:'20 มี.ค.', icon:'🌱'}
+];
+var LANDMARK_SLOTS = [
+  {angle:THETA_PERI_GAME, key:'peri', label:'Perihelion',  sub:'~3 ม.ค. ใกล้สุด', icon:'🔺'},
+  {angle:14,              key:'aph',  label:'Aphelion',    sub:'~4 ก.ค. ไกลสุด',  icon:'🔻'}
+];
+
+function gAngle(a){ a = a%360; if (a<0) a+=360; return a; }
+function angDiffAbs(a,b){ var d=Math.abs(gAngle(a)-gAngle(b))%360; return d>180?360-d:d; }
+function orbitRadius(angle){
+  var rad=(angle-THETA_PERI_GAME)*Math.PI/180;
+  return ORBIT_A_GAME*(1-ORBIT_E_GAME*ORBIT_E_GAME)/(1+ORBIT_E_GAME*Math.cos(rad));
+}
+function orbitXY(angle){
+  var r = orbitRadius(angle), rad = angle*Math.PI/180;
+  return [GAME_CX+r*Math.sin(rad), GAME_CY-r*Math.cos(rad)];
+}
+function nearestAnswerSlot(angle){
+  var best=0, bestD=999;
+  for (var i=0;i<ANSWER_SLOTS.length;i++){ var d=angDiffAbs(angle,ANSWER_SLOTS[i].angle); if (d<bestD){bestD=d;best=i;} }
+  return best;
+}
+function liveOutcome(angle){
+  var sunDir = gAngle(angle+180);
+  var rel = angDiffAbs(180, sunDir); // FIXED_TILT_ANGLE = 180 (see buildArrangeSvg)
+  var near = angDiffAbs(angle,THETA_PERI_GAME)<25 ? ' (ใกล้จุด Perihelion)' : (angDiffAbs(angle,14)<25 ? ' (ใกล้จุด Aphelion)' : '');
+  if (rel<45) return 'ขั้วโลกเหนือเอียง เข้าหา ดวงอาทิตย์'+near+' → ซีกโลกเหนือร้อน, ซีกโลกใต้หนาว';
+  if (rel>135) return 'ขั้วโลกเหนือเอียง ออกจาก ดวงอาทิตย์'+near+' → ซีกโลกเหนือหนาว, ซีกโลกใต้ร้อน';
+  return 'แกนโลกเอียง ด้านข้าง เทียบกับดวงอาทิตย์'+near+' → กลางวันยาวเท่ากลางคืนทั่วโลก';
+}
+
+var GAME_COUNTRY_POOL = ["Thailand","Japan","Australia","France","Brazil","Egypt","Norway","New Zealand","Canada","India","South Africa","China","Argentina","Germany","Kenya","United Kingdom","Chile"];
+
+function distanceNote(slotIdx){
+  // slotIdx 0=Jun(near Aphelion) , 2=Dec(near Perihelion)
+  if (slotIdx===0) return ' สังเกตว่าช่วงนี้โลกอยู่ใกล้จุด Aphelion (ไกลดวงอาทิตย์ที่สุด) ด้วยซ้ำ — แสดงว่าระยะห่างจากดวงอาทิตย์ไม่ใช่สาเหตุของความร้อน';
+  if (slotIdx===2) return ' สังเกตว่าช่วงนี้โลกอยู่ใกล้จุด Perihelion (ใกล้ดวงอาทิตย์ที่สุด) แต่กลับหนาว — แสดงว่าระยะห่างจากดวงอาทิตย์ไม่ใช่สาเหตุของฤดูกาล';
+  return '';
+}
+
+function pickQuestion(){
+  if (Math.random() < 0.5){
+    var name = GAME_COUNTRY_POOL[Math.floor(Math.random()*GAME_COUNTRY_POOL.length)];
+    var row = null;
+    for (var i=0;i<COUNTRIES.length;i++){ if (COUNTRIES[i][1]===name){ row=COUNTRIES[i]; break; } }
+    var isN = row[2] >= 0;
+    var wantSummer = Math.random()<0.5;
+    var seasonWord = wantSummer ? "ฤดูร้อน" : "ฤดูหนาว";
+    var slotIdx = (wantSummer===isN) ? 0 : 2;
+    var hemi = isN ? "ซีกโลกเหนือ" : "ซีกโลกใต้";
+    return {
+      text: row[0]+" กำลังเป็น"+seasonWord,
+      targetSlot: slotIdx,
+      explain: function(){
+        return row[0]+"อยู่"+hemi+" — เมื่อขั้วโลกเหนือ"+(slotIdx===0?"เอียงเข้าหาดวงอาทิตย์ (ครีษมายัน)":"เอียงออกจากดวงอาทิตย์ (เหมายัน)")+" ซีกโลกที่"+row[0]+"อยู่จะเป็น"+seasonWord+"."+distanceNote(slotIdx);
+      }
+    };
+  } else {
+    var idx = Math.floor(Math.random()*4);
+    return {
+      text: "ลากโลกไปยังตำแหน่งของ \""+ANSWER_SLOTS[idx].label+"\" ("+ANSWER_SLOTS[idx].sub+")",
+      targetSlot: idx,
+      explain: function(){
+        if (idx===0) return "วันครีษมายัน: ขั้วโลกเหนือเอียงเข้าหาดวงอาทิตย์มากที่สุดในรอบปี ซีกโลกเหนือมีกลางวันยาวที่สุด."+distanceNote(0);
+        if (idx===2) return "วันเหมายัน: ขั้วโลกเหนือเอียงออกจากดวงอาทิตย์มากที่สุดในรอบปี ซีกโลกเหนือมีกลางวันสั้นที่สุด."+distanceNote(2);
+        return "วันวิษุวัต: แกนโลกเอียงด้านข้างเทียบกับดวงอาทิตย์ ไม่เอียงเข้าหรือออก กลางวันและกลางคืนจึงยาวเท่ากันทั่วโลก";
+      }
+    };
+  }
+}
+
+function evaluateAnswer(){
+  var snapped = nearestAnswerSlot(gameState.earthAngle);
+  var correct = snapped === gameState.currentQ.targetSlot;
+  return { positionOK: correct, seasonOK: correct, snappedSlot: snapped };
+}
+
+function svgElNS(tag,attrs){
+  var e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (var k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+
+function buildArrangeSvg(){
+  var svg = document.getElementById('arrangeSvg');
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  var defs = svgElNS('defs',{});
+  var sunGrad = svgElNS('radialGradient',{id:'gSunGrad',cx:'35%',cy:'30%'});
+  sunGrad.appendChild(svgElNS('stop',{offset:'0%','stop-color':'#ffd27a'}));
+  sunGrad.appendChild(svgElNS('stop',{offset:'60%','stop-color':'#f5a742'}));
+  sunGrad.appendChild(svgElNS('stop',{offset:'100%','stop-color':'#a85f18'}));
+  defs.appendChild(sunGrad);
+  var earthGrad = svgElNS('linearGradient',{id:'gEarthGrad',x1:'0%',y1:'0%',x2:'100%',y2:'0%'});
+  earthGrad.appendChild(svgElNS('stop',{offset:'0%','stop-color':'#8fe3ec'}));
+  earthGrad.appendChild(svgElNS('stop',{offset:'100%','stop-color':'#1c6570'}));
+  defs.appendChild(earthGrad);
+  gameEls.earthGradEl = earthGrad;
+  svg.appendChild(defs);
+
+  var pathPts = [];
+  for (var i=0;i<=72;i++){ var p = orbitXY(i*5); pathPts.push(p[0].toFixed(1)+','+p[1].toFixed(1)); }
+  svg.appendChild(svgElNS('polygon',{points:pathPts.join(' '),fill:'none',stroke:'rgba(255,255,255,0.18)','stroke-width':2}));
+
+  ANSWER_SLOTS.forEach(function(s){
+    var pt = orbitXY(s.angle);
+    var lp = orbitXY(s.angle); // label offset computed below using outward normal approx
+    var outward = Math.atan2(pt[0]-GAME_CX, -(pt[1]-GAME_CY));
+    var lx = pt[0] + 20*Math.sin(outward), ly = pt[1] - 20*Math.cos(outward);
+    svg.appendChild(svgElNS('circle',{cx:pt[0],cy:pt[1],r:3,fill:'rgba(255,255,255,0.55)'}));
+    var t = svgElNS('text',{x:lx,y:ly,'text-anchor':'middle','dominant-baseline':'middle',fill:'rgba(237,240,250,0.8)','font-size':'9','font-family':"'Sarabun',sans-serif"});
+    t.textContent = s.icon+' '+s.label;
+    svg.appendChild(t);
+  });
+  LANDMARK_SLOTS.forEach(function(s){
+    var pt = orbitXY(s.angle);
+    var outward = Math.atan2(pt[0]-GAME_CX, -(pt[1]-GAME_CY));
+    var lx = pt[0] + 17*Math.sin(outward), ly = pt[1] - 17*Math.cos(outward);
+    svg.appendChild(svgElNS('circle',{cx:pt[0],cy:pt[1],r:3,fill:'#ffd27a',opacity:0.8}));
+    var t = svgElNS('text',{x:lx,y:ly,'text-anchor':'middle','dominant-baseline':'middle',fill:'rgba(255,210,122,0.85)','font-size':'8','font-family':"'Sarabun',sans-serif"});
+    t.textContent = s.icon+' '+s.label;
+    svg.appendChild(t);
+  });
+
+  var sunGlow = svgElNS('circle',{cx:GAME_CX,cy:GAME_CY,r:GAME_SUN_R+14,fill:'#ffcf7a',opacity:0});
+  svg.appendChild(sunGlow); gameEls.sunGlow = sunGlow;
+  var beam = svgElNS('line',{x1:GAME_CX,y1:GAME_CY,x2:GAME_CX,y2:GAME_CY,stroke:'#ffd27a','stroke-width':2,opacity:0});
+  svg.appendChild(beam); gameEls.beam = beam;
+  svg.appendChild(svgElNS('circle',{cx:GAME_CX,cy:GAME_CY,r:GAME_SUN_R,fill:'url(#gSunGrad)'}));
+
+  var earthGroup = svgElNS('g',{style:'cursor:grab;'});
+  var earthCircle = svgElNS('circle',{cx:0,cy:0,r:GAME_EARTH_R,fill:'url(#gEarthGrad)',stroke:'rgba(255,255,255,0.55)','stroke-width':1.2});
+  earthGroup.appendChild(earthCircle);
+  var tiltVec = [GAME_EARTH_R*1.9*Math.sin(180*Math.PI/180), -GAME_EARTH_R*1.9*Math.cos(180*Math.PI/180)];
+  earthGroup.appendChild(svgElNS('line',{x1:0,y1:0,x2:tiltVec[0].toFixed(1),y2:tiltVec[1].toFixed(1),stroke:'#ff6a55','stroke-width':3,'stroke-linecap':'round'}));
+  earthGroup.appendChild(svgElNS('circle',{cx:tiltVec[0].toFixed(1),cy:tiltVec[1].toFixed(1),r:4,fill:'#ff6a55'}));
+  svg.appendChild(earthGroup);
+  gameEls.earthGroup = earthGroup; gameEls.earthCircle = earthCircle;
+
+  wireArrangeDrag(svg);
+  redrawArrange();
+}
+
+function wireArrangeDrag(svg){
+  function svgPoint(e){
+    var rect = svg.getBoundingClientRect();
+    var sx=320/rect.width, sy=320/rect.height;
+    return [(e.clientX-rect.left)*sx, (e.clientY-rect.top)*sy];
+  }
+  gameEls.earthGroup.addEventListener('pointerdown', function(e){
+    gameState.dragging=true; svg.setPointerCapture(e.pointerId);
+    gameEls.earthGroup.style.cursor='grabbing';
+  });
+  svg.addEventListener('pointermove', function(e){
+    if (!gameState.dragging) return;
+    var p = svgPoint(e);
+    gameState.earthAngle = gAngle(Math.atan2(p[0]-GAME_CX, -(p[1]-GAME_CY))*180/Math.PI);
+    redrawArrange();
+  });
+  function endDrag(){
+    if (!gameState.dragging) return;
+    gameState.dragging=false;
+    gameEls.earthGroup.style.cursor='grab';
+    gameState.earthAngle = ANSWER_SLOTS[nearestAnswerSlot(gameState.earthAngle)].angle;
+    redrawArrange();
+  }
+  svg.addEventListener('pointerup', endDrag);
+  svg.addEventListener('pointercancel', endDrag);
+}
+
+function redrawArrange(){
+  var ep = orbitXY(gameState.earthAngle);
+  gameEls.earthGroup.setAttribute('transform','translate('+ep[0].toFixed(1)+','+ep[1].toFixed(1)+')');
+
+  var liveEl = document.getElementById('arrangeLive');
+  if (gameState.lightOn){
+    gameEls.sunGlow.setAttribute('opacity','0.32');
+    gameEls.beam.setAttribute('opacity','0.42');
+    gameEls.beam.setAttribute('x2',ep[0]); gameEls.beam.setAttribute('y2',ep[1]);
+    var sunDir = gAngle(gameState.earthAngle+180), rad = sunDir*Math.PI/180;
+    var gx1=50+50*Math.sin(rad), gy1=50-50*Math.cos(rad), gx2=50-50*Math.sin(rad), gy2=50+50*Math.cos(rad);
+    gameEls.earthGradEl.setAttribute('x1',gx1+'%'); gameEls.earthGradEl.setAttribute('y1',gy1+'%');
+    gameEls.earthGradEl.setAttribute('x2',gx2+'%'); gameEls.earthGradEl.setAttribute('y2',gy2+'%');
+    if (liveEl) liveEl.textContent = liveOutcome(gameState.earthAngle);
+  } else {
+    gameEls.sunGlow.setAttribute('opacity','0');
+    gameEls.beam.setAttribute('opacity','0');
+    gameEls.earthGradEl.setAttribute('x1','0%'); gameEls.earthGradEl.setAttribute('y1','0%');
+    gameEls.earthGradEl.setAttribute('x2','100%'); gameEls.earthGradEl.setAttribute('y2','0%');
+    if (liveEl) liveEl.textContent = 'กดปุ่ม "เปิดแสงอาทิตย์" เพื่อดูว่าซีกโลกไหนได้รับแสง';
+  }
+}
+
+function renderQuestion(){
+  gameState.currentQ = pickQuestion();
+  var startSlot;
+  do { startSlot = Math.floor(Math.random()*4); } while (startSlot===gameState.currentQ.targetSlot);
+  gameState.earthAngle = ANSWER_SLOTS[startSlot].angle;
+  gameState.lightOn = false;
+  gameState.started = false;
+
+  document.getElementById('questionText').textContent = gameState.currentQ.text;
+  document.getElementById('gameProgress').textContent = 'โจทย์ '+(gameState.round+1)+'/'+gameState.total;
+  document.getElementById('gameScoreTop').textContent = '⭐ '+gameState.score;
+  document.getElementById('lightToggleBtn').textContent = '💡 เปิดแสงอาทิตย์';
+  document.getElementById('gameQuestionPanel').classList.remove('hidden');
+  document.getElementById('startQuestionPanel').classList.remove('hidden');
+  document.getElementById('arrangePanel').classList.add('hidden');
+  document.getElementById('gameFeedbackPanel').classList.add('hidden');
+  document.getElementById('gameSummaryPanel').classList.add('hidden');
+}
+
+function onStartQuestion(){
+  gameState.started = true;
+  document.getElementById('startQuestionPanel').classList.add('hidden');
+  document.getElementById('arrangePanel').classList.remove('hidden');
+  if (!gameEls.earthGroup) buildArrangeSvg(); else redrawArrange();
+}
+
+function onCheckAnswer(){
+  var r = evaluateAnswer();
+  if (r.positionOK){ gameState.score += 20; gameState.correctCount++; }
+  document.getElementById('feedbackChecks').innerHTML =
+    checkRowHtml('โลกอยู่ในตำแหน่งที่ถูกต้อง', r.positionOK)+
+    checkRowHtml('ฤดูกาลตรงกับโจทย์', r.seasonOK);
+  document.getElementById('feedbackExplain').textContent = gameState.currentQ.explain();
+  document.getElementById('gameQuestionPanel').classList.add('hidden');
+  document.getElementById('gameFeedbackPanel').classList.remove('hidden');
+  document.getElementById('gameScoreTop').textContent = '⭐ '+gameState.score;
+}
+function checkRowHtml(label, ok){
+  return '<div class="feedback-check '+(ok?'pass':'fail')+'"><span class="fc-icon">'+(ok?'✅':'❌')+'</span><span>'+label+'</span></div>';
+}
+
+function finishGame(){
+  var elapsed = Math.max(0,Math.round((Date.now()-gameState.startTime)/1000));
+  var pct = gameState.correctCount/gameState.total;
+  var tier = pct>=0.8 ? {icon:'🌟',label:'Expert'} : (pct>=0.5 ? {icon:'⭐',label:'Good'} : {icon:'📘',label:'Beginner'});
+  document.getElementById('summaryTier').innerHTML = tier.icon+'<span class="tier-label">'+tier.label+'</span>';
+  document.getElementById('summaryStats').innerHTML =
+    '<div class="stat"><b>'+gameState.score+'</b><span>คะแนนรวม</span></div>'+
+    '<div class="stat"><b>'+gameState.correctCount+'/'+gameState.total+'</b><span>ตอบถูก</span></div>'+
+    '<div class="stat"><b>'+elapsed+' วิ</b><span>เวลาที่ใช้</span></div>';
+  document.getElementById('gameQuestionPanel').classList.add('hidden');
+  document.getElementById('startQuestionPanel').classList.add('hidden');
+  document.getElementById('arrangePanel').classList.add('hidden');
+  document.getElementById('gameFeedbackPanel').classList.add('hidden');
+  document.getElementById('gameSummaryPanel').classList.remove('hidden');
+}
+
+function onNextQuestion(){
+  gameState.round++;
+  if (gameState.round>=gameState.total) finishGame(); else renderQuestion();
+}
+
+function startGame(){
+  gameState.round=0; gameState.score=0; gameState.correctCount=0; gameState.startTime=Date.now();
+  renderQuestion();
+}
+
+/* =========================================================================
+   PART L — LIGHTWEIGHT SHELL BOOTSTRAP (runs immediately; Model's heavy
+   Three.js init is deferred until the person actually opens it)
+   ========================================================================= */
+function wireShell(){
+  document.getElementById('homeEnterBtn').addEventListener('click', function(){ showScreen('menu'); });
+  document.getElementById('homeHowtoBtn').addEventListener('click', function(){ showScreen('howto'); });
+  document.getElementById('howtoBackBtn').addEventListener('click', function(){ showScreen('home'); });
+  document.getElementById('menuHomeBtn').addEventListener('click', function(){ showScreen('home'); });
+  document.getElementById('menuModelBtn').addEventListener('click', function(){ showScreen('model'); });
+  document.getElementById('menuGameBtn').addEventListener('click', function(){ showScreen('game'); startGame(); });
+  document.getElementById('modelBackBtn').addEventListener('click', function(){ showScreen('menu'); });
+  document.getElementById('gameBackBtn').addEventListener('click', function(){ showScreen('menu'); });
+  document.getElementById('startQuestionBtn').addEventListener('click', onStartQuestion);
+  document.getElementById('lightToggleBtn').addEventListener('click', function(){
+    gameState.lightOn = !gameState.lightOn;
+    this.textContent = gameState.lightOn ? '💡 ปิดแสง' : '💡 เปิดแสงอาทิตย์';
+    redrawArrange();
+  });
+  document.getElementById('checkAnswerBtn').addEventListener('click', onCheckAnswer);
+  document.getElementById('nextQuestionBtn').addEventListener('click', onNextQuestion);
+  document.getElementById('playAgainBtn').addEventListener('click', startGame);
+  document.getElementById('backToMenuBtn').addEventListener('click', function(){ showScreen('menu'); });
+}
+
+if (document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded', wireShell);
+} else {
+  wireShell();
+}
+
 </script>
 </body>
-</html>
 </html>
