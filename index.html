@@ -112,13 +112,20 @@ button,input,select{font-family:inherit;}
 /* stat row */
 .stat-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px;}
 .stat-card{
-  background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius-sm);
+  position:relative;background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius-sm);
   padding:11px 9px;display:flex;flex-direction:column;gap:5px;min-height:88px;
 }
 .stat-card .stat-icon{width:15px;height:15px;color:var(--sun);opacity:.9;}
 .stat-card .stat-icon svg{width:100%;height:100%;}
 .stat-card[data-stat="tilt"] .stat-icon{color:var(--earth-teal);}
 .stat-card[data-stat="orbit"] .stat-icon{color:var(--violet);}
+.info-trigger{
+  position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;
+  background:rgba(255,255,255,0.08);border:1px solid var(--line-strong);color:var(--text-muted);
+  font-size:10px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  padding:0;font-family:var(--font-display);
+}
+.info-trigger:hover{ color:var(--text-primary);border-color:var(--earth-teal); }
 .stat-label{font-size:10px;color:var(--text-muted);line-height:1.3;letter-spacing:.1px;}
 .stat-value{font-family:var(--font-display);font-size:15px;font-weight:600;color:var(--text-primary);line-height:1.15;}
 .stat-sub{font-size:9.5px;color:var(--text-dim);line-height:1.3;}
@@ -224,6 +231,21 @@ button,input,select{font-family:inherit;}
 .result-metric .rm-label{font-size:9.5px;color:var(--text-dim);display:block;margin-bottom:3px;}
 .result-metric .rm-value{font-family:var(--font-display);font-size:13px;font-weight:600;}
 
+/* learn-more accordion */
+.learn-list{display:flex;flex-direction:column;gap:8px;}
+.learn-item{border:1px solid var(--line);border-radius:var(--radius-sm);background:rgba(255,255,255,0.025);overflow:hidden;}
+.learn-head{
+  width:100%;display:flex;align-items:center;gap:9px;padding:10px 11px;background:transparent;border:none;
+  cursor:pointer;text-align:left;color:var(--text-primary);font-family:var(--font-body);
+}
+.learn-icon{font-size:15px;flex:none;}
+.learn-title{flex:1;font-size:12.5px;font-weight:500;}
+.learn-chevron{flex:none;font-size:10px;color:var(--text-dim);transition:transform .2s ease;}
+.learn-item.expanded .learn-chevron{transform:rotate(180deg);color:var(--earth-teal);}
+.learn-body{max-height:0;overflow:hidden;transition:max-height .28s ease;}
+.learn-item.expanded .learn-body{max-height:220px;}
+.learn-body p{margin:0;padding:0 13px 13px 37px;font-size:11.5px;color:var(--text-muted);line-height:1.65;}
+
 .footer-note{font-size:10px;color:var(--text-dim);line-height:1.6;padding:4px 4px 0;text-align:center;}
 
 /* scale legend */
@@ -319,29 +341,48 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{
 /* ---------- game ---------- */
 #screen-game.active{ display:flex;flex-direction:column; }
 .game-topbar{
-  flex:none;display:flex;align-items:center;gap:12px;padding:16px 20px;
+  flex:none;display:flex;align-items:center;gap:12px;padding:10px 16px;
   border-bottom:1px solid var(--line);background:var(--bg-deep);
 }
-.game-progress{ font-family:var(--font-display);font-size:13px;color:var(--text-muted); }
-.game-score{ margin-left:auto;font-family:var(--font-display);font-size:14px;color:var(--sun-bright); }
-.game-body{ flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:22px 18px 40px;background:var(--bg-void); }
-.question-text{ font-family:var(--font-display);font-size:19px;text-align:center;max-width:440px;margin:0 0 18px;line-height:1.5; }
-.arrange-static-hint{ text-align:center;font-size:11.5px;color:var(--text-muted);max-width:340px;line-height:1.6;margin:0 0 14px; }
-.arrange-static-hint b{ color:var(--sun-bright); }
-.start-question-panel{ display:flex;flex-direction:column;align-items:center;gap:16px;padding:18px 0 6px; }
-.start-question-panel .primary-btn{ width:min(280px,80vw); }
-.arrange-panel{ display:flex;flex-direction:column;align-items:center; }
-.light-btn{ margin:0 0 14px;width:min(320px,88vw); }
-.arrange-wrap{ position:relative;width:min(320px,88vw);margin-bottom:12px; }
-#arrangeSvg{ width:100%;height:auto;display:block;touch-action:none; }
-.arrange-live{
-  text-align:center;font-size:12.5px;color:var(--earth-teal);min-height:34px;max-width:320px;
-  line-height:1.55;margin:0 0 16px;background:rgba(79,200,214,0.08);border:1px solid rgba(79,200,214,0.25);
-  border-radius:var(--radius-sm);padding:8px 14px;
+.game-progress{ font-family:var(--font-display);font-size:12.5px;color:var(--text-muted); }
+.game-score{ margin-left:auto;font-family:var(--font-display);font-size:13.5px;color:var(--sun-bright); }
+.hint-toggle-wrap{ display:flex;align-items:center;gap:6px;cursor:pointer;flex:none; }
+.hint-toggle-label{ font-size:10.5px;color:var(--text-muted);font-family:var(--font-display);white-space:nowrap; }
+.hint-toggle-switch{ position:relative;width:32px;height:18px;flex:none; }
+.hint-toggle-switch input{ opacity:0;width:0;height:0;position:absolute; }
+.hint-toggle-slider{
+  position:absolute;inset:0;background:rgba(255,255,255,0.14);border-radius:99px;
+  transition:background .2s ease,border-color .2s ease;border:1px solid var(--line-strong);pointer-events:none;
 }
-.game-question-panel .primary-btn{ width:min(320px,88vw); }
+.hint-toggle-slider::before{
+  content:'';position:absolute;width:12px;height:12px;left:2px;top:2px;
+  background:var(--text-primary);border-radius:50%;transition:transform .2s ease;
+}
+.hint-toggle-switch input:checked + .hint-toggle-slider{ background:var(--earth-teal);border-color:var(--earth-teal); }
+.hint-toggle-switch input:checked + .hint-toggle-slider::before{ transform:translateX(14px);background:#04171a; }
+.game-body{ flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;align-items:stretch;padding:10px 12px 14px;background:var(--bg-void); }
+.game-question-panel{ flex:1;min-height:0;display:flex;flex-direction:column;align-items:center; }
+.question-text{ font-family:var(--font-display);font-size:clamp(15px,4.2vw,20px);text-align:center;max-width:560px;margin:2px auto 8px;line-height:1.4;flex:none; }
+.arrange-static-hint{ text-align:center;font-size:11px;color:var(--text-muted);max-width:440px;line-height:1.5;margin:0 auto 8px;flex:none; }
+.arrange-static-hint b{ color:var(--sun-bright); }
+.start-question-panel{ flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px; }
+.start-question-panel .primary-btn{ width:min(280px,80vw); }
+.arrange-panel{ flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center; }
+.light-btn{ margin:0 auto 10px;width:min(400px,92vw);flex:none; }
+.arrange-wrap{
+  position:relative;flex:1;min-height:120px;width:100%;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:8px;
+}
+#arrangeSvg{ width:min(92vw,54vh,540px);height:min(92vw,54vh,540px);max-width:100%;max-height:100%;display:block;touch-action:none; }
+.arrange-live{
+  text-align:center;font-size:12px;color:var(--earth-teal);min-height:30px;width:min(400px,92vw);
+  line-height:1.5;margin:0 auto 10px;background:rgba(79,200,214,0.08);border:1px solid rgba(79,200,214,0.25);
+  border-radius:var(--radius-sm);padding:7px 14px;flex:none;box-sizing:border-box;
+}
+.game-question-panel .primary-btn{ width:min(400px,92vw);flex:none; }
 
-.game-feedback-panel{ width:min(420px,92vw);display:flex;flex-direction:column;align-items:stretch;gap:16px; }
+.game-feedback-panel{ width:min(420px,92vw);margin:0 auto;display:flex;flex-direction:column;align-items:stretch;gap:16px; }
 .feedback-checks{ display:flex;flex-direction:column;gap:10px; }
 .feedback-check{
   display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:var(--radius-sm);
@@ -352,7 +393,7 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{
 .feedback-check .fc-icon{ font-size:15px; }
 .feedback-explain{ color:var(--text-muted);font-size:12.5px;line-height:1.7;background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px 16px; }
 
-.game-summary-panel{ width:min(420px,92vw);display:flex;flex-direction:column;align-items:center;text-align:center;gap:18px;margin-top:20px; }
+.game-summary-panel{ width:min(420px,92vw);margin:20px auto 0;display:flex;flex-direction:column;align-items:center;text-align:center;gap:18px; }
 .summary-tier{ font-size:52px; }
 .summary-tier .tier-label{ display:block;font-family:var(--font-display);font-size:19px;margin-top:6px;color:var(--sun-bright); }
 .summary-stats{ display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;width:100%; }
@@ -366,7 +407,7 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{
   .menu-card{ width:100%;max-width:320px; }
 }
 
-
+@media (prefers-reduced-motion:reduce){
   .primary-btn .pulse,#loadScreen .load-orb{animation:none;}
 }
 
@@ -422,7 +463,7 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{
   <div class="howto-stage">
     <h2 class="howto-title">คำแนะนำการเล่น</h2>
     <ol class="howto-list">
-      <li><b>แบบจำลองการเกิดฤดูกาล</b> — หมุนกล้องดูระบบสุริยะ เลือกวันที่/เวลา แล้วกดปุ่มดูฤดูเพื่อคลิกจุดใดก็ได้บนโลก หรือเลือกประเทศ เพื่อดูว่าที่นั่นเป็นฤดูอะไร</li>
+      <li><b>แบบจำลองการเกิดฤดูกาล</b> — หมุนกล้องดูระบบสุริยะ เลือกวันที่/เวลา แล้วกดปุ่มดูฤดูเพื่อคลิกจุดใดก็ได้บนโลก หรือเลือกประเทศ เพื่อดูว่าที่นั่นเป็นฤดูอะไร กดไอคอน ⓘ บนการ์ดตัวเลข หรือเปิดแผง "เรียนรู้เพิ่มเติม" ท้ายเมนู เพื่ออ่านคำอธิบายแนวคิดต่าง ๆ</li>
       <li><b>โหมดเกม</b> — ระบบจะสุ่มโจทย์ เช่น "ประเทศไทยเป็นฤดูร้อน" หรือ "วันครีษมายัน"</li>
       <li>สิ่งเดียวที่ต้องทำคือ <b>ลากลูกโลกไปตามวงโคจร</b> ไปยังตำแหน่งที่คิดว่าตรงกับโจทย์ (มี 4 จุดให้อ้างอิงบนวงโคจร) — สังเกตว่า <b>ลูกศรสีแดง (แกนโลก) จะชี้ทิศทางเดิมเสมอ ไม่หมุนตาม</b> ส่วนข้อความใต้วงโคจรจะบอกผลแบบสดว่าตอนนี้ซีกโลกไหนเป็นฤดูอะไร</li>
       <li>ลากไปเรื่อย ๆ จนพอใจ แล้วกด "ตรวจคำตอบ" ระบบจะบอกว่าถูกหรือผิด พร้อมคำอธิบาย เมื่อครบ 5 ข้อจะสรุปคะแนนและระดับความเข้าใจ</li>
@@ -460,6 +501,13 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{
     </button>
     <div class="game-progress" id="gameProgress">โจทย์ 1/5</div>
     <div class="game-score" id="gameScoreTop">⭐ 0</div>
+    <label class="hint-toggle-wrap" title="เปิด/ปิดคำใบ้ระหว่างเล่น">
+      <span class="hint-toggle-label">คำใบ้</span>
+      <span class="hint-toggle-switch">
+        <input type="checkbox" id="hintToggleInput">
+        <span class="hint-toggle-slider"></span>
+      </span>
+    </label>
   </header>
 
   <div class="game-body">
@@ -523,18 +571,21 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{
 
     <div class="stat-row">
       <div class="stat-card" data-stat="dist">
+        <button class="info-trigger" data-learn="cause" aria-label="เรียนรู้เพิ่มเติม">ⓘ</button>
         <span class="stat-icon" id="iconDist"></span>
         <span class="stat-label">ระยะห่างโลก–ดวงอาทิตย์</span>
         <span class="stat-value" id="statDistance">—</span>
         <span class="stat-sub" id="statDistanceSub"></span>
       </div>
       <div class="stat-card" data-stat="tilt">
+        <button class="info-trigger" data-learn="tilt" aria-label="เรียนรู้เพิ่มเติม">ⓘ</button>
         <span class="stat-icon" id="iconTilt"></span>
         <span class="stat-label">แกนเอียงของโลก</span>
         <span class="stat-value">23.5°</span>
         <span class="stat-sub">คงที่ตลอดวงโคจร</span>
       </div>
       <div class="stat-card" data-stat="orbit">
+        <button class="info-trigger" data-learn="revolve" aria-label="เรียนรู้เพิ่มเติม">ⓘ</button>
         <span class="stat-icon" id="iconOrbit"></span>
         <span class="stat-label">คาบ/ระยะการโคจร</span>
         <span class="stat-value">365.25 วัน</span>
@@ -575,6 +626,11 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{
         <select id="countrySelect"><option value="">— เลือกประเทศ —</option></select>
       </div>
       <div class="result-card hidden" id="resultCard"></div>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title"><span class="dot" style="background:var(--violet);box-shadow:0 0 8px 1px var(--violet)"></span>เรียนรู้เพิ่มเติม</h2>
+      <div class="learn-list" id="learnList"></div>
     </section>
 
     <p class="footer-note">พิกัดประเทศใช้ตำแหน่งเมืองหลวง/จุดอ้างอิงโดยประมาณ · สูตรคำนวณฤดูอิงมุมเอียงแกนโลก 23.45°</p>
@@ -1935,10 +1991,10 @@ function ensureModelInit(){
    Earth's 23.5 deg tilt is fixed and pre-set; only its orbital position is
    ever draggable.
    ========================================================================= */
-var GAME_CX=160, GAME_CY=150, GAME_EARTH_R=15, GAME_SUN_R=26;
-var ORBIT_A_GAME=94, ORBIT_E_GAME=0.42, THETA_PERI_GAME=193; // exaggerated ellipse, for visibility only
+var GAME_CX=160, GAME_CY=174, GAME_EARTH_R=15, GAME_SUN_R=26;
+var ORBIT_A_GAME=86, ORBIT_E_GAME=0.42, THETA_PERI_GAME=193; // exaggerated ellipse, for visibility only
 var gameEls = {};
-var gameState = {earthAngle:0, round:0, total:5, score:0, correctCount:0, startTime:0, currentQ:null, dragging:false, lightOn:false, started:false};
+var gameState = {earthAngle:0, round:0, total:5, score:0, correctCount:0, startTime:0, currentQ:null, dragging:false, lightOn:false, started:false, hintsOn:false};
 
 var ANSWER_SLOTS = [
   {angle:0,   key:'jun', label:'ครีษมายัน',    sub:'21 มิ.ย.', icon:'☀️'},
@@ -2052,7 +2108,7 @@ function buildArrangeSvg(){
     var pt = orbitXY(s.angle);
     var lp = orbitXY(s.angle); // label offset computed below using outward normal approx
     var outward = Math.atan2(pt[0]-GAME_CX, -(pt[1]-GAME_CY));
-    var lx = pt[0] + 20*Math.sin(outward), ly = pt[1] - 20*Math.cos(outward);
+    var lx = pt[0] + 15*Math.sin(outward), ly = pt[1] - 15*Math.cos(outward);
     svg.appendChild(svgElNS('circle',{cx:pt[0],cy:pt[1],r:3,fill:'rgba(255,255,255,0.55)'}));
     var t = svgElNS('text',{x:lx,y:ly,'text-anchor':'middle','dominant-baseline':'middle',fill:'rgba(237,240,250,0.8)','font-size':'9','font-family':"'Sarabun',sans-serif"});
     t.textContent = s.icon+' '+s.label;
@@ -2061,7 +2117,7 @@ function buildArrangeSvg(){
   LANDMARK_SLOTS.forEach(function(s){
     var pt = orbitXY(s.angle);
     var outward = Math.atan2(pt[0]-GAME_CX, -(pt[1]-GAME_CY));
-    var lx = pt[0] + 17*Math.sin(outward), ly = pt[1] - 17*Math.cos(outward);
+    var lx = pt[0] + 12*Math.sin(outward), ly = pt[1] - 12*Math.cos(outward);
     svg.appendChild(svgElNS('circle',{cx:pt[0],cy:pt[1],r:3,fill:'#ffd27a',opacity:0.8}));
     var t = svgElNS('text',{x:lx,y:ly,'text-anchor':'middle','dominant-baseline':'middle',fill:'rgba(255,210,122,0.85)','font-size':'8','font-family':"'Sarabun',sans-serif"});
     t.textContent = s.icon+' '+s.label;
@@ -2127,7 +2183,7 @@ function redrawArrange(){
     var gx1=50+50*Math.sin(rad), gy1=50-50*Math.cos(rad), gx2=50-50*Math.sin(rad), gy2=50+50*Math.cos(rad);
     gameEls.earthGradEl.setAttribute('x1',gx1+'%'); gameEls.earthGradEl.setAttribute('y1',gy1+'%');
     gameEls.earthGradEl.setAttribute('x2',gx2+'%'); gameEls.earthGradEl.setAttribute('y2',gy2+'%');
-    if (liveEl) liveEl.textContent = liveOutcome(gameState.earthAngle);
+    if (liveEl) liveEl.textContent = gameState.hintsOn ? liveOutcome(gameState.earthAngle) : '🔎 สังเกตด้านสว่าง-มืดของโลก แล้วตัดสินใจเองว่าซีกไหนเป็นฤดูอะไร (ปิดคำใบ้อยู่)';
   } else {
     gameEls.sunGlow.setAttribute('opacity','0');
     gameEls.beam.setAttribute('opacity','0');
@@ -2201,6 +2257,9 @@ function onNextQuestion(){
 
 function startGame(){
   gameState.round=0; gameState.score=0; gameState.correctCount=0; gameState.startTime=Date.now();
+  gameState.hintsOn = false;
+  var hintInput = document.getElementById('hintToggleInput');
+  if (hintInput) hintInput.checked = false;
   renderQuestion();
 }
 
@@ -2208,6 +2267,44 @@ function startGame(){
    PART L — LIGHTWEIGHT SHELL BOOTSTRAP (runs immediately; Model's heavy
    Three.js init is deferred until the person actually opens it)
    ========================================================================= */
+var LEARN_TOPICS = [
+  {id:'rotate',  icon:'🌐', title:'การหมุนรอบตัวเองของโลก', body:'โลกหมุนรอบแกนของตนเองใช้เวลาประมาณ 24 ชั่วโมง ทำให้พื้นที่ที่หันเข้าหาดวงอาทิตย์เป็นเวลากลางวัน ส่วนพื้นที่ที่หันออกจากดวงอาทิตย์เป็นเวลากลางคืน'},
+  {id:'revolve', icon:'🛰️', title:'การโคจรรอบดวงอาทิตย์', body:'โลกโคจรรอบดวงอาทิตย์ใช้เวลาประมาณ 365 วัน การโคจรร่วมกับการเอียงของแกนโลกเป็นปัจจัยสำคัญที่ทำให้แต่ละพื้นที่บนโลกได้รับแสงอาทิตย์แตกต่างกันในแต่ละช่วงของปี'},
+  {id:'tilt',    icon:'📐', title:'แกนโลกเอียง 23.5°', body:'แกนโลกเอียงประมาณ 23.5 องศาเมื่อเทียบกับระนาบการโคจร ความเอียงนี้ทำให้มุมตกกระทบของแสงอาทิตย์เปลี่ยนแปลงตลอดปี ส่งผลให้เกิดฤดูกาลต่าง ๆ'},
+  {id:'cause',   icon:'☀️', title:'สาเหตุการเกิดฤดูกาล', body:'ฤดูกาลเกิดจากการเอียงของแกนโลกและการโคจรรอบดวงอาทิตย์ ไม่ได้เกิดจากระยะห่างระหว่างโลกกับดวงอาทิตย์ เมื่อซีกโลกหนึ่งได้รับแสงอาทิตย์มากกว่า จะเป็นฤดูร้อน ขณะที่อีกซีกโลกจะเป็นฤดูหนาว'},
+  {id:'junsol',  icon:'🌞', title:'จุดครีษมายัน', body:'เป็นวันที่ซีกโลกเหนือได้รับแสงอาทิตย์มากที่สุดของปี (ประมาณวันที่ 21 มิถุนายน) ทำให้มีเวลากลางวันยาวที่สุด ส่วนซีกโลกใต้ได้รับแสงน้อยกว่า'},
+  {id:'decsol',  icon:'❄️', title:'จุดเหมายัน', body:'เป็นวันที่ซีกโลกเหนือได้รับแสงอาทิตย์น้อยที่สุดของปี (ประมาณวันที่ 21 ธันวาคม) ทำให้มีกลางคืนยาวที่สุด ส่วนซีกโลกใต้ได้รับแสงมากกว่า'},
+  {id:'equinox', icon:'⚖️', title:'จุดวิษุวัต', body:'เป็นช่วงที่ดวงอาทิตย์ส่องตรงบริเวณเส้นศูนย์สูตร ทำให้เวลากลางวันและกลางคืนของทั้งโลกมีความยาวใกล้เคียงกัน เกิดขึ้นประมาณวันที่ 21 มีนาคม และ 23 กันยายน'},
+  {id:'hemis',   icon:'🌍', title:'ซีกโลกเหนือและซีกโลกใต้', body:'เนื่องจากแกนโลกเอียง เมื่อซีกโลกเหนือได้รับแสงอาทิตย์มาก ซีกโลกใต้จะได้รับแสงน้อย ส่งผลให้ทั้งสองซีกโลกมีฤดูกาลตรงข้ามกัน'}
+];
+
+function buildLearnPanel(){
+  var list = document.getElementById('learnList');
+  if (!list || list.childNodes.length) return; // already built (or missing on this screen)
+  LEARN_TOPICS.forEach(function(t){
+    var item = document.createElement('div');
+    item.className = 'learn-item';
+    item.id = 'learn-'+t.id;
+    var head = document.createElement('button');
+    head.className = 'learn-head';
+    head.innerHTML = '<span class="learn-icon">'+t.icon+'</span><span class="learn-title">'+t.title+'</span><span class="learn-chevron">▾</span>';
+    head.addEventListener('click', function(){ item.classList.toggle('expanded'); });
+    var body = document.createElement('div');
+    body.className = 'learn-body';
+    body.innerHTML = '<p>'+t.body+'</p>';
+    item.appendChild(head); item.appendChild(body);
+    list.appendChild(item);
+  });
+}
+function openLearnTopic(id){
+  var item = document.getElementById('learn-'+id);
+  if (!item) return;
+  var all = document.querySelectorAll('.learn-item');
+  for (var i=0;i<all.length;i++){ if (all[i]!==item) all[i].classList.remove('expanded'); }
+  item.classList.add('expanded');
+  if (item.scrollIntoView) item.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
 function wireShell(){
   document.getElementById('homeEnterBtn').addEventListener('click', function(){ showScreen('menu'); });
   document.getElementById('homeHowtoBtn').addEventListener('click', function(){ showScreen('howto'); });
@@ -2218,6 +2315,10 @@ function wireShell(){
   document.getElementById('modelBackBtn').addEventListener('click', function(){ showScreen('menu'); });
   document.getElementById('gameBackBtn').addEventListener('click', function(){ showScreen('menu'); });
   document.getElementById('startQuestionBtn').addEventListener('click', onStartQuestion);
+  document.getElementById('hintToggleInput').addEventListener('change', function(){
+    gameState.hintsOn = this.checked;
+    if (gameEls.earthGroup) redrawArrange();
+  });
   document.getElementById('lightToggleBtn').addEventListener('click', function(){
     gameState.lightOn = !gameState.lightOn;
     this.textContent = gameState.lightOn ? '💡 ปิดแสง' : '💡 เปิดแสงอาทิตย์';
@@ -2227,6 +2328,15 @@ function wireShell(){
   document.getElementById('nextQuestionBtn').addEventListener('click', onNextQuestion);
   document.getElementById('playAgainBtn').addEventListener('click', startGame);
   document.getElementById('backToMenuBtn').addEventListener('click', function(){ showScreen('menu'); });
+
+  buildLearnPanel();
+  var infoBtns = document.querySelectorAll('.info-trigger');
+  for (var i=0;i<infoBtns.length;i++){
+    infoBtns[i].addEventListener('click', function(e){
+      e.stopPropagation();
+      openLearnTopic(this.getAttribute('data-learn'));
+    });
+  }
 }
 
 if (document.readyState==='loading'){
