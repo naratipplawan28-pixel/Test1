@@ -859,7 +859,8 @@ var CFG = {
   EARTH_R: 1.5,
   MOON_R: 0.40,
   ORBIT_A: 42,           // visual semi-major axis of Earth's orbit
-  ORBIT_E: 0.0167,       // real eccentricity
+  ORBIT_E: 0.0167,       // real eccentricity -- used only for the actual km distance figures
+  ORBIT_E_VISUAL: 0.46,  // exaggerated eccentricity used only for the 3D orbit's drawn shape/position, so the ellipse (and the fact that distance varies) is clearly visible instead of looking like a circle
   MOON_ORBIT_R: 3.6,
   TILT_DEG: 23.44,
   AU_KM: 149600000,      // 1 AU in km, real
@@ -923,11 +924,15 @@ function sunDistanceKm(N){
 function thetaOf(N){ return (N-172)/365*360; }
 var THETA_PERI = thetaOf(3); // perihelion direction, ~ -166.7 deg
 
-// Earth's position on its (slightly) elliptical orbit, world XZ plane, Sun at origin
+// Earth's position on its VISUALLY-exaggerated elliptical orbit (see ORBIT_E_VISUAL),
+// world XZ plane, Sun at origin. The real distance shown in the UI comes from
+// sunDistanceKm() above, which uses the true eccentricity -- only the drawn
+// shape here is stretched, purely so the ellipse reads clearly on screen.
 function earthOrbitPosition(N){
   var th = thetaOf(N)*Math.PI/180;
   var thp = THETA_PERI*Math.PI/180;
-  var r = CFG.ORBIT_A*(1-CFG.ORBIT_E*CFG.ORBIT_E)/(1+CFG.ORBIT_E*Math.cos(th-thp));
+  var e = CFG.ORBIT_E_VISUAL;
+  var r = CFG.ORBIT_A*(1-e*e)/(1+e*Math.cos(th-thp));
   return {x:r*Math.cos(th), z:r*Math.sin(th), r:r, thetaDeg: thetaOf(N)};
 }
 
@@ -946,6 +951,35 @@ var SEASON_TH = {
   autumn:{name:"ฤดูใบไม้ร่วง",icon:"🍂",color:"#e08a3e"},
   winter:{name:"ฤดูหนาว",icon:"❄️",color:"#7ec8e3"}
 };
+// Most tropical-zone locations are better described by 3 monsoon-driven seasons
+// (hot / rainy / cool) than the 4 astronomical ones. Boundaries follow the
+// commonly-taught Thai pattern (hot ~20 Feb-20 May, rainy ~21 May-16 Oct,
+// cool ~17 Oct-19 Feb), mirrored 6 months for the Southern Hemisphere.
+var TROPICAL_SEASON_TH = {
+  hot:  {name:"ฤดูร้อน", icon:"☀️", color:"#f5a742"},
+  rainy:{name:"ฤดูฝน",   icon:"🌧️", color:"#4fc8d6"},
+  cool: {name:"ฤดูหนาว", icon:"❄️", color:"#7ec8e3"}
+};
+function tropicalPhase(N,isNorth){
+  var n = isNorth ? N : (((N-1+183)%365)+1);
+  if (n>=51 && n<=140) return "hot";
+  if (n>=141 && n<=289) return "rainy";
+  return "cool";
+}
+// Locations very close to the equator (roughly within 10 deg) usually don't get
+// a distinct cool spell at all -- commonly cited examples: Malaysia, Indonesia,
+// Singapore, Maldives, Colombia, Kenya. These are better described with just 2
+// seasons (rainy vs hot/dry). Exact monsoon timing varies a lot by region, so
+// this uses a representative Maritime-Southeast-Asia-style split as a default.
+var EQUATOR_LAT_LIMIT = 10;
+var EQUATOR_SEASON_TH = {
+  hotdry:{name:"ฤดูร้อน/ฤดูแล้ง", icon:"☀️", color:"#f5a742"},
+  rainy: {name:"ฤดูฝน",           icon:"🌧️", color:"#4fc8d6"}
+};
+function equatorPhase(N,isNorth){
+  var n = isNorth ? N : (((N-1+183)%365)+1);
+  return (n>=91 && n<=304) ? "hotdry" : "rainy";
+}
 
 function getSeasonInfo(lat,N){
   var decl = solarDeclination(N);
@@ -957,12 +991,21 @@ function getSeasonInfo(lat,N){
   var out = {zone:zone, declination:decl, dayLength:dl, noonElevation:elev, seasonKey:sName};
 
   if (zone === "tropical"){
-    out.label = "เขตร้อน (Tropical)";
-    out.icon = "🌴";
-    out.color = "#4fc8d6";
+    var isN = lat>=0;
     var overhead = Math.abs(lat-decl) < 5;
-    var desc = "ละติจูดนี้อยู่ในเขตร้อน ดวงอาทิตย์ตั้งฉากหรือเกือบตั้งฉากได้ตลอดปี อุณหภูมิจึงค่อนข้างคงที่ทั้งปี ไม่มี 4 ฤดูแบบเขตอบอุ่น ฤดูกาลท้องถิ่นในเขตนี้มักแบ่งตามปริมาณฝน (ฤดูฝน/ฤดูแล้ง) ซึ่งขึ้นกับลมมรสุมของแต่ละภูมิภาคมากกว่าอุณหภูมิ";
-    if (overhead) desc += " ในวันที่เลือกนี้ ดวงอาทิตย์เที่ยงวันอยู่เกือบตรงศีรษะพอดี (เงาสั้นมาก)";
+    var desc;
+    if (Math.abs(lat) <= EQUATOR_LAT_LIMIT){
+      var ephase = equatorPhase(N,isN);
+      var te = EQUATOR_SEASON_TH[ephase];
+      out.label = te.name; out.icon = te.icon; out.color = te.color;
+      desc = "พื้นที่ใกล้เส้นศูนย์สูตร (ในรัศมีประมาณ "+EQUATOR_LAT_LIMIT+"°) ส่วนใหญ่ไม่มีช่วงอากาศเย็นชัดเจน จึงมักแบ่งแค่ 2 ฤดู คือฤดูฝนและฤดูร้อน/ฤดูแล้ง (เช่น มาเลเซีย อินโดนีเซีย สิงคโปร์ มัลดีฟส์ โคลอมเบีย เคนยา) ขณะนี้อยู่ในช่วง"+te.name+" ทั้งนี้จังหวะฝนจริงขึ้นกับลมมรสุมของแต่ละภูมิภาคมาก บางพื้นที่อาจมีฝนชุก 2 ช่วงต่อปี";
+    } else {
+      var phase = tropicalPhase(N,isN);
+      var tt = TROPICAL_SEASON_TH[phase];
+      out.label = tt.name; out.icon = tt.icon; out.color = tt.color;
+      desc = "พื้นที่ในเขตร้อนที่ห่างเส้นศูนย์สูตรออกมาส่วนใหญ่แบ่งเป็น 3 ฤดูตามปริมาณฝนและลมมรสุมมากกว่าอุณหภูมิ (ซึ่งค่อนข้างคงที่ตลอดปี) ได้แก่ ฤดูร้อน ฤดูฝน และฤดูหนาว ขณะนี้อยู่ในช่วง"+tt.name+" ทั้งนี้ช่วงเวลาที่แน่นอนอาจแตกต่างกันไปตามภูมิภาค";
+    }
+    if (overhead) desc += " วันนี้ดวงอาทิตย์เที่ยงวันอยู่เกือบตรงศีรษะพอดี (เงาสั้นมาก)";
     out.desc = desc;
   } else if (zone === "temperate"){
     var t = SEASON_TH[sName];
@@ -1540,9 +1583,27 @@ function buildOrbitPath(){
     pts.push(new THREE.Vector3(pos.x,0,pos.z));
   }
   var geo = new THREE.BufferGeometry().setFromPoints(pts);
-  var mat = new THREE.LineBasicMaterial({color:0x5a6a9a,transparent:true,opacity:0.55});
+  var mat = new THREE.LineBasicMaterial({color:0x8496d6,transparent:true,opacity:0.75});
   orbitLine = new THREE.Line(geo,mat);
   scene.add(orbitLine);
+
+  var periPos = earthOrbitPosition(3);
+  var periDot = new THREE.Mesh(new THREE.SphereGeometry(0.5,16,16), new THREE.MeshBasicMaterial({color:0xff6a55}));
+  periDot.position.set(periPos.x,0,periPos.z);
+  scene.add(periDot);
+  var periLabel = makeTextSprite("จุดใกล้สุด (Perihelion)","#ff9d8a",38,"rgba(30,10,6,0.55)");
+  periLabel.position.set(periPos.x,1.7,periPos.z);
+  periLabel.scale.multiplyScalar(1.15);
+  scene.add(periLabel);
+
+  var aphPos = earthOrbitPosition(186);
+  var aphDot = new THREE.Mesh(new THREE.SphereGeometry(0.5,16,16), new THREE.MeshBasicMaterial({color:0x6ad4ff}));
+  aphDot.position.set(aphPos.x,0,aphPos.z);
+  scene.add(aphDot);
+  var aphLabel = makeTextSprite("จุดไกลสุด (Aphelion)","#a8e6ff",38,"rgba(6,20,30,0.55)");
+  aphLabel.position.set(aphPos.x,1.7,aphPos.z);
+  aphLabel.scale.multiplyScalar(1.15);
+  scene.add(aphLabel);
 
   var moonPts=[];
   for (var j=0;j<=64;j++){
