@@ -2000,6 +2000,16 @@ function init(){
   updateSceneForDate();
   updateCameraFromCtl();
 
+  var defaultCountry = null;
+  for (var dci=0;dci<COUNTRIES.length;dci++){ if (COUNTRIES[dci][1]==='Thailand'){ defaultCountry=COUNTRIES[dci]; break; } }
+  if (defaultCountry){
+    var countrySel = document.getElementById('countrySelect');
+    if (countrySel) countrySel.value = defaultCountry[0];
+    setViewSeasonButtonState(true);
+    selectLocation(defaultCountry[2], defaultCountry[3], defaultCountry[0], defaultCountry);
+    focusCameraOn(defaultCountry[2], defaultCountry[3]);
+  }
+
   requestAnimationFrame(animate);
 
   setTimeout(function(){
