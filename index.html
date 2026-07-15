@@ -78,7 +78,28 @@ button,input,select{font-family:inherit;}
   cursor:pointer;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
 }
 .icon-btn svg{width:18px;height:18px;}
+.help-btn{font-family:var(--font-display);font-size:16px;font-weight:700;}
 .mobile-only{display:none;}
+
+.modal-overlay{
+  position:fixed;inset:0;z-index:60;background:rgba(5,7,14,0.72);backdrop-filter:blur(3px);
+  display:flex;align-items:center;justify-content:center;padding:24px;
+}
+.modal-overlay.hidden{display:none;}
+.modal-card{
+  position:relative;width:min(480px,100%);max-height:80vh;overflow-y:auto;
+  background:var(--bg-panel-solid);border:1px solid var(--line-strong);border-radius:var(--radius-lg);
+  padding:26px 24px 22px;box-shadow:0 20px 60px -10px rgba(0,0,0,0.6);
+}
+.modal-close{
+  position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:50%;
+  background:rgba(255,255,255,0.06);border:1px solid var(--line);color:var(--text-muted);
+  cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;
+}
+.modal-close:hover{color:var(--text-primary);border-color:var(--line-strong);}
+.modal-title{font-family:var(--font-display);font-size:18px;margin:0 0 16px;padding-right:26px;}
+.modal-list{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:12px;color:var(--text-muted);font-size:12.5px;line-height:1.7;}
+.modal-list b{color:var(--text-primary);}
 
 .hint{
   position:absolute;left:50%;bottom:20px;transform:translateX(-50%);
@@ -561,7 +582,25 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{
         <p>แบบจำลองระบบสุริยะ 3 มิติ — ดวงอาทิตย์ · โลก · ดวงจันทร์</p>
       </div>
     </div>
+    <button class="icon-btn help-btn" id="modelHelpBtn" aria-label="วิธีใช้งานแบบจำลอง">?</button>
   </header>
+
+  <div class="modal-overlay hidden" id="modelHelpModal">
+    <div class="modal-card">
+      <button class="modal-close" id="modelHelpCloseBtn" aria-label="ปิด">✕</button>
+      <h2 class="modal-title">วิธีใช้งานแบบจำลอง</h2>
+      <ul class="modal-list">
+        <li><b>หมุนมุมมอง</b> — ลากบนหน้าจอเพื่อหมุนกล้องรอบระบบสุริยะ</li>
+        <li><b>ซูมเข้า-ออก</b> — เลื่อนล้อเมาส์ หรือบีบนิ้วสองนิ้วบนมือถือ</li>
+        <li><b>เลือกวันและเวลา</b> — ลากรอบวงแหวนปีในแผงด้านข้าง หรือพิมพ์วันที่/เวลาโดยตรง</li>
+        <li><b>ปุ่มลัด 4 ปุ่ม</b> — กระโดดไปวันวสันตวิษุวัต/ครีษมายัน/ศารทวิษุวัต/เหมายันทันที</li>
+        <li><b>เล่นอัตโนมัติ</b> — กด ▶ เพื่อดูโลกโคจรไปเรื่อยๆ ปรับความเร็วได้ด้วยแถบเลื่อนข้างปุ่ม</li>
+        <li><b>ดูฤดูกาลตามพื้นที่</b> — กดปุ่ม "กดเพื่อเลือกจุดบนโลก" แล้วแตะจุดใดก็ได้บนลูกโลก หรือเลือกประเทศจากดรอปดาวน์ (มีครบทุกประเทศ)</li>
+        <li><b>เรียนรู้เพิ่มเติม</b> — เปิดแผงท้ายเมนูด้านข้าง หรือกดไอคอน ⓘ บนการ์ดตัวเลข เพื่ออ่านคำอธิบายแนวคิดต่าง ๆ</li>
+        <li><b>ตัวเลขในการ์ดด้านบน</b> — ระยะห่างจากดวงอาทิตย์ แกนเอียง และคาบการโคจร ล้วนอัปเดตตามวันที่ที่เลือกไว้เสมอ</li>
+      </ul>
+    </div>
+  </div>
 
   <div class="hint" id="dragHint">ลากเพื่อหมุนมุมมอง · เลื่อนล้อ/บีบนิ้วเพื่อซูม</div>
   <div class="legend">มาตราส่วนของขนาด/ระยะทางในภาพไม่ใช่มาตราส่วนจริง — ตัวเลขในแผงข้อมูลเป็นค่าจริง</div>
@@ -1891,7 +1930,17 @@ function updateSceneForDate(){
 
   var pos = earthOrbitPosition(N);
   earthGroup.position.set(pos.x,0,pos.z);
-  earthSpinGroup.rotation.y = hourFrac*Math.PI*2 + Math.PI;
+
+  // The rotation formula is calibrated so longitude 0 faces the sun at UTC
+  // noon. The date/time controls show the person's own local civil time, so
+  // convert local -> UTC using the browser's timezone offset first -- otherwise
+  // the wrong side of Earth ends up lit for anyone outside UTC+0 (e.g. someone
+  // in Thailand, UTC+7, setting local noon would otherwise see Thailand
+  // rendered at night, since Thailand's actual UTC time then is ~05:00).
+  var tzOffsetHours = -APP.date.getTimezoneOffset()/60;
+  var utcHourFrac = (((hourFrac*24 - tzOffsetHours) % 24) + 24) % 24 / 24;
+
+  earthSpinGroup.rotation.y = (90 - pos.thetaDeg)*Math.PI/180 + utcHourFrac*Math.PI*2;
   cloudMesh.rotation.y = clockTime*0.006;
 
   var moonAngle = (N/CFG.MOON_PERIOD_DAYS)*Math.PI*2;
@@ -2384,6 +2433,15 @@ function wireShell(){
   document.getElementById('menuModelBtn').addEventListener('click', function(){ showScreen('model'); });
   document.getElementById('menuGameBtn').addEventListener('click', function(){ showScreen('game'); startGame(); });
   document.getElementById('modelBackBtn').addEventListener('click', function(){ showScreen('menu'); });
+  document.getElementById('modelHelpBtn').addEventListener('click', function(){
+    document.getElementById('modelHelpModal').classList.remove('hidden');
+  });
+  document.getElementById('modelHelpCloseBtn').addEventListener('click', function(){
+    document.getElementById('modelHelpModal').classList.add('hidden');
+  });
+  document.getElementById('modelHelpModal').addEventListener('click', function(e){
+    if (e.target === this) this.classList.add('hidden');
+  });
   document.getElementById('gameBackBtn').addEventListener('click', function(){ showScreen('menu'); });
   document.getElementById('startQuestionBtn').addEventListener('click', onStartQuestion);
   document.getElementById('hintToggleInput').addEventListener('change', function(){
