@@ -186,13 +186,20 @@ button,input,select{font-family:inherit;}
 
 .quickjump{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px;}
 .quickjump button{
-  background:rgba(255,255,255,0.03);border:1px solid var(--line);border-radius:var(--radius-sm);
-  color:var(--text-muted);padding:8px 6px;font-size:11px;cursor:pointer;line-height:1.5;
-  transition:border-color .15s,color .15s,background .15s;font-family:var(--font-body);
+  position:relative;background:rgba(255,255,255,0.03);border:1px solid var(--line);border-radius:var(--radius-sm);
+  color:var(--text-muted);padding:8px 22px 8px 6px;font-size:11px;cursor:pointer;line-height:1.5;
+  transition:border-color .15s,color .15s,background .15s;font-family:var(--font-body);text-align:left;
 }
 .quickjump button small{opacity:.75;font-size:9.5px;}
 .quickjump button:hover{border-color:var(--line-strong);color:var(--text-primary);background:rgba(255,255,255,0.06);}
 .quickjump button.active{border-color:var(--sun);color:var(--sun-bright);background:rgba(245,167,66,0.08);}
+.qj-info{
+  position:absolute;top:5px;right:5px;width:15px;height:15px;border-radius:50%;
+  background:rgba(255,255,255,0.08);border:1px solid var(--line-strong);color:var(--text-muted);
+  font-size:9px;line-height:1;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);
+}
+.qj-info:hover{color:var(--text-primary);border-color:var(--earth-teal);}
 
 .playrow{display:flex;align-items:center;gap:10px;}
 .ghost-btn{
@@ -646,10 +653,10 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{
         <label>เวลา<input type="time" id="timeInput"></label>
       </div>
       <div class="quickjump">
-        <button data-jump="mar">วสันตวิษุวัต<br><small>20 มี.ค. · กลางวัน=กลางคืน</small></button>
-        <button data-jump="jun">ครีษมายัน<br><small>21 มิ.ย. · เหนือ:วันยาวสุด</small></button>
-        <button data-jump="sep">ศารทวิษุวัต<br><small>23 ก.ย. · กลางวัน=กลางคืน</small></button>
-        <button data-jump="dec">เหมายัน<br><small>21 ธ.ค. · เหนือ:วันสั้นสุด</small></button>
+        <button data-jump="mar">วสันตวิษุวัต<br><small>20 มี.ค. · กลางวัน=กลางคืน</small><span class="qj-info" data-learn="mareq">ⓘ</span></button>
+        <button data-jump="jun">ครีษมายัน<br><small>21 มิ.ย. · เหนือ:วันยาวสุด</small><span class="qj-info" data-learn="junsol">ⓘ</span></button>
+        <button data-jump="sep">ศารทวิษุวัต<br><small>23 ก.ย. · กลางวัน=กลางคืน</small><span class="qj-info" data-learn="sepeq">ⓘ</span></button>
+        <button data-jump="dec">เหมายัน<br><small>21 ธ.ค. · เหนือ:วันสั้นสุด</small><span class="qj-info" data-learn="decsol">ⓘ</span></button>
       </div>
       <div class="playrow">
         <button class="ghost-btn" id="playBtn"><span id="playIcon">▶</span> เล่นอัตโนมัติ</button>
@@ -2226,20 +2233,23 @@ function buildArrangeSvg(){
 
   ANSWER_SLOTS.forEach(function(s){
     var pt = orbitXY(s.angle);
-    var lp = orbitXY(s.angle); // label offset computed below using outward normal approx
     var outward = Math.atan2(pt[0]-GAME_CX, -(pt[1]-GAME_CY));
-    var lx = pt[0] + 15*Math.sin(outward), ly = pt[1] - 15*Math.cos(outward);
-    svg.appendChild(svgElNS('circle',{cx:pt[0],cy:pt[1],r:3,fill:'rgba(255,255,255,0.55)'}));
-    var t = svgElNS('text',{x:lx,y:ly,'text-anchor':'middle','dominant-baseline':'middle',fill:'rgba(237,240,250,0.8)','font-size':'9','font-family':"'Sarabun',sans-serif"});
+    var lx = pt[0] + 16*Math.sin(outward), ly = pt[1] - 16*Math.cos(outward);
+    svg.appendChild(svgElNS('circle',{cx:pt[0],cy:pt[1],r:3.5,fill:'#ffffff'}));
+    var t = svgElNS('text',{x:lx,y:ly,'text-anchor':'middle','dominant-baseline':'middle',
+      fill:'#ffffff','font-size':'10','font-weight':'600','font-family':"'Sarabun',sans-serif",
+      'paint-order':'stroke','stroke':'rgba(4,7,15,0.9)','stroke-width':'3','stroke-linejoin':'round'});
     t.textContent = s.icon+' '+s.label;
     svg.appendChild(t);
   });
   LANDMARK_SLOTS.forEach(function(s){
     var pt = orbitXY(s.angle);
     var outward = Math.atan2(pt[0]-GAME_CX, -(pt[1]-GAME_CY));
-    var lx = pt[0] + 12*Math.sin(outward), ly = pt[1] - 12*Math.cos(outward);
-    svg.appendChild(svgElNS('circle',{cx:pt[0],cy:pt[1],r:3,fill:'#ffd27a',opacity:0.8}));
-    var t = svgElNS('text',{x:lx,y:ly,'text-anchor':'middle','dominant-baseline':'middle',fill:'rgba(255,210,122,0.85)','font-size':'8','font-family':"'Sarabun',sans-serif"});
+    var lx = pt[0] + 13*Math.sin(outward), ly = pt[1] - 13*Math.cos(outward);
+    svg.appendChild(svgElNS('circle',{cx:pt[0],cy:pt[1],r:3,fill:'#ffd27a'}));
+    var t = svgElNS('text',{x:lx,y:ly,'text-anchor':'middle','dominant-baseline':'middle',
+      fill:'#ffd27a','font-size':'9','font-weight':'600','font-family':"'Sarabun',sans-serif",
+      'paint-order':'stroke','stroke':'rgba(4,7,15,0.9)','stroke-width':'2.6','stroke-linejoin':'round'});
     t.textContent = s.icon+' '+s.label;
     svg.appendChild(t);
   });
@@ -2394,7 +2404,8 @@ var LEARN_TOPICS = [
   {id:'cause',   icon:'☀️', title:'สาเหตุการเกิดฤดูกาล', body:'ฤดูกาลเกิดจากการเอียงของแกนโลกและการโคจรรอบดวงอาทิตย์ ไม่ได้เกิดจากระยะห่างระหว่างโลกกับดวงอาทิตย์ เมื่อซีกโลกหนึ่งได้รับแสงอาทิตย์มากกว่า จะเป็นฤดูร้อน ขณะที่อีกซีกโลกจะเป็นฤดูหนาว'},
   {id:'junsol',  icon:'🌞', title:'จุดครีษมายัน', body:'เป็นวันที่ซีกโลกเหนือได้รับแสงอาทิตย์มากที่สุดของปี (ประมาณวันที่ 21 มิถุนายน) ทำให้มีเวลากลางวันยาวที่สุด ส่วนซีกโลกใต้ได้รับแสงน้อยกว่า'},
   {id:'decsol',  icon:'❄️', title:'จุดเหมายัน', body:'เป็นวันที่ซีกโลกเหนือได้รับแสงอาทิตย์น้อยที่สุดของปี (ประมาณวันที่ 21 ธันวาคม) ทำให้มีกลางคืนยาวที่สุด ส่วนซีกโลกใต้ได้รับแสงมากกว่า'},
-  {id:'equinox', icon:'⚖️', title:'จุดวิษุวัต', body:'เป็นช่วงที่ดวงอาทิตย์ส่องตรงบริเวณเส้นศูนย์สูตร ทำให้เวลากลางวันและกลางคืนของทั้งโลกมีความยาวใกล้เคียงกัน เกิดขึ้นประมาณวันที่ 21 มีนาคม และ 23 กันยายน'},
+  {id:'mareq',   icon:'🌱', title:'จุดวสันตวิษุวัต', body:'เป็นช่วงที่ดวงอาทิตย์เคลื่อนผ่านเส้นศูนย์สูตรฟ้าจากใต้ขึ้นเหนือ เกิดขึ้นประมาณวันที่ 20-21 มีนาคม กลางวันและกลางคืนยาวเท่ากันเกือบทั่วโลก ถือเป็นจุดเริ่มต้นฤดูใบไม้ผลิของซีกโลกเหนือ และจุดเริ่มต้นฤดูใบไม้ร่วงของซีกโลกใต้'},
+  {id:'sepeq',   icon:'🍂', title:'จุดศารทวิษุวัต', body:'เป็นช่วงที่ดวงอาทิตย์เคลื่อนผ่านเส้นศูนย์สูตรฟ้าจากเหนือลงใต้ เกิดขึ้นประมาณวันที่ 22-23 กันยายน กลางวันและกลางคืนยาวเท่ากันเกือบทั่วโลก ถือเป็นจุดเริ่มต้นฤดูใบไม้ร่วงของซีกโลกเหนือ และจุดเริ่มต้นฤดูใบไม้ผลิของซีกโลกใต้'},
   {id:'hemis',   icon:'🌍', title:'ซีกโลกเหนือและซีกโลกใต้', body:'เนื่องจากแกนโลกเอียง เมื่อซีกโลกเหนือได้รับแสงอาทิตย์มาก ซีกโลกใต้จะได้รับแสงน้อย ส่งผลให้ทั้งสองซีกโลกมีฤดูกาลตรงข้ามกัน'}
 ];
 
@@ -2462,6 +2473,13 @@ function wireShell(){
   var infoBtns = document.querySelectorAll('.info-trigger');
   for (var i=0;i<infoBtns.length;i++){
     infoBtns[i].addEventListener('click', function(e){
+      e.stopPropagation();
+      openLearnTopic(this.getAttribute('data-learn'));
+    });
+  }
+  var qjInfoBtns = document.querySelectorAll('.qj-info');
+  for (var j=0;j<qjInfoBtns.length;j++){
+    qjInfoBtns[j].addEventListener('click', function(e){
       e.stopPropagation();
       openLearnTopic(this.getAttribute('data-learn'));
     });
