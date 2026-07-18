@@ -258,6 +258,9 @@ button,input,select{font-family:inherit;}
 .result-metric{background:rgba(255,255,255,0.03);border:1px solid var(--line);border-radius:7px;padding:8px 10px;}
 .result-metric .rm-label{font-size:9.5px;color:var(--text-dim);display:block;margin-bottom:3px;}
 .result-metric .rm-value{font-family:var(--font-display);font-size:13px;font-weight:600;}
+.result-chart-wrap{margin-top:12px;background:rgba(255,255,255,0.03);border:1px solid var(--line);border-radius:7px;padding:10px 10px 6px;}
+.result-chart-title{font-size:9.5px;color:var(--text-dim);margin-bottom:6px;display:flex;align-items:center;gap:5px;}
+.rc-dot{width:5px;height:5px;border-radius:50%;background:#ffd27a;box-shadow:0 0 5px 1px #ffd27a;}
 
 /* learn-more accordion */
 .learn-list{display:flex;flex-direction:column;gap:8px;}
@@ -337,6 +340,12 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{
   padding:40px 24px 60px;background:var(--bg-void);
 }
 .howto-title{ font-family:var(--font-display);font-size:22px;margin:0 0 22px; }
+.intro-block{ max-width:520px;width:100%;color:var(--text-muted);font-size:13.5px;line-height:1.85;margin:0 0 8px; }
+.intro-block p{ margin:0 0 14px; }
+.intro-block b{ color:var(--text-primary); }
+.obj-list{ margin:0 0 4px;padding-left:22px;display:flex;flex-direction:column;gap:10px; }
+.obj-list li{ padding-left:4px; }
+.obj-list b{ color:var(--sun-bright); }
 .howto-list{
   max-width:520px;width:100%;color:var(--text-muted);font-size:13.5px;line-height:1.85;
   padding-left:22px;margin:0 0 26px;display:flex;flex-direction:column;gap:14px;
@@ -489,7 +498,18 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{
 <!-- ============== HOW TO ============== -->
 <div id="screen-howto" class="screen">
   <div class="howto-stage">
-    <h2 class="howto-title">คำแนะนำการเล่น</h2>
+    <h2 class="howto-title">แนะนำและวัตถุประสงค์</h2>
+    <div class="intro-block">
+      <p><b>เว็บไซต์นี้คืออะไร</b> — เป็นแบบจำลอง 3 มิติเชิงโต้ตอบที่สร้างขึ้นเพื่อช่วยให้เข้าใจว่า "ทำไมโลกจึงมีฤดูกาล" โดยให้ผู้เรียนได้ทดลองปรับเปลี่ยนตัวแปรต่าง ๆ ด้วยตนเอง (วันที่ เวลา ตำแหน่งบนโลก) และสังเกตผลลัพธ์แบบทันที แทนการท่องจำเพียงอย่างเดียว</p>
+      <p><b>วัตถุประสงค์การเรียนรู้</b> — หลังใช้งานแล้ว ผู้เรียนจะสามารถ:</p>
+      <ul class="obj-list">
+        <li>อธิบายได้ว่าสาเหตุหลักของฤดูกาลคือ<b>แกนโลกที่เอียง 23.5°</b> ไม่ใช่ระยะห่างจากดวงอาทิตย์</li>
+        <li>ระบุตำแหน่งและความหมายของวันครีษมายัน เหมายัน วสันตวิษุวัต และศารทวิษุวัตได้</li>
+        <li>อธิบายได้ว่าเหตุใดซีกโลกเหนือและใต้จึงมีฤดูกาลตรงข้ามกันเสมอ</li>
+        <li>บอกฤดูกาลของประเทศต่าง ๆ ทั่วโลกในแต่ละช่วงเวลาได้ รวมถึงพื้นที่เขตร้อนที่มีรูปแบบต่างจากเขตอบอุ่น</li>
+      </ul>
+    </div>
+    <h2 class="howto-title" style="margin-top:8px;">วิธีใช้งาน</h2>
     <ol class="howto-list">
       <li><b>แบบจำลองการเกิดฤดูกาล</b> — หมุนกล้องดูระบบสุริยะ เลือกวันที่/เวลา แล้วกดปุ่มดูฤดูเพื่อคลิกจุดใดก็ได้บนโลก หรือเลือกประเทศ เพื่อดูว่าที่นั่นเป็นฤดูอะไร กดไอคอน ⓘ บนการ์ดตัวเลข หรือเปิดแผง "เรียนรู้เพิ่มเติม" ท้ายเมนู เพื่ออ่านคำอธิบายแนวคิดต่าง ๆ</li>
       <li><b>โหมดเกม</b> — ระบบจะสุ่มโจทย์ เช่น "ประเทศไทยเป็นฤดูร้อน" หรือ "วันครีษมายัน"</li>
@@ -1723,6 +1743,41 @@ function escapeHtml(s){
   return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; });
 }
 
+function dayLengthChartSVG(lat,currentN){
+  var W=320,H=116,mL=27,mR=8,mT=8,mB=18;
+  var plotW=W-mL-mR, plotH=H-mT-mB;
+  function xOf(day){ return mL+(day-1)/364*plotW; }
+  function yOf(hours){ return mT+(24-hours)/24*plotH; }
+
+  var pts=[];
+  for (var d=1; d<=365; d+=5){
+    pts.push(xOf(d).toFixed(1)+','+yOf(dayLengthHours(lat,solarDeclination(d))).toFixed(1));
+  }
+  pts.push(xOf(365).toFixed(1)+','+yOf(dayLengthHours(lat,solarDeclination(365))).toFixed(1));
+
+  var gridSvg='';
+  [0,6,12,18,24].forEach(function(h){
+    var y=yOf(h);
+    gridSvg += '<line x1="'+mL+'" y1="'+y.toFixed(1)+'" x2="'+(W-mR)+'" y2="'+y.toFixed(1)+'" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>';
+    gridSvg += '<text x="'+(mL-5)+'" y="'+(y+3).toFixed(1)+'" text-anchor="end" font-size="8" fill="rgba(237,240,250,0.45)" font-family="Sarabun,sans-serif">'+h+'</text>';
+  });
+  var monthDays=[1,91,182,274], monthLbl=['ม.ค.','เม.ย.','ก.ค.','ต.ค.'];
+  monthDays.forEach(function(d,i){
+    gridSvg += '<text x="'+xOf(d).toFixed(1)+'" y="'+(H-4)+'" text-anchor="middle" font-size="8" fill="rgba(237,240,250,0.45)" font-family="Sarabun,sans-serif">'+monthLbl[i]+'</text>';
+  });
+
+  var cn = Math.max(1,Math.min(365,Math.round(currentN)));
+  var curDL = dayLengthHours(lat,solarDeclination(cn));
+  var curX = xOf(cn), curY = yOf(curDL);
+  var marker = '<line x1="'+curX.toFixed(1)+'" y1="'+mT+'" x2="'+curX.toFixed(1)+'" y2="'+(H-mB)+'" stroke="#ffd27a" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.75"/>'+
+    '<circle cx="'+curX.toFixed(1)+'" cy="'+curY.toFixed(1)+'" r="4" fill="#ffd27a" stroke="#1a1206" stroke-width="1.4"/>';
+
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;">'+
+    gridSvg+
+    '<polyline points="'+pts.join(' ')+'" fill="none" stroke="#4fc8d6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'+
+    marker+'</svg>';
+}
+
 function renderResultCard(){
   var card = document.getElementById('resultCard');
   if (!selectedLoc){ card.classList.add('hidden'); card.innerHTML=""; return; }
@@ -1739,7 +1794,8 @@ function renderResultCard(){
     '<div class="result-grid">'+
       '<div class="result-metric"><span class="rm-label">ความยาวกลางวัน</span><span class="rm-value">'+info.dayLength.toFixed(1)+' ชม.</span></div>'+
       '<div class="result-metric"><span class="rm-label">มุมเงยดวงอาทิตย์ (เที่ยงวัน)</span><span class="rm-value">'+elevTxt+'</span></div>'+
-    '</div>';
+    '</div>'+
+    '<div class="result-chart-wrap"><div class="result-chart-title">ความยาวกลางวันตลอดปี ณ ตำแหน่งนี้ <span class="rc-dot"></span></div>'+dayLengthChartSVG(selectedLoc.lat,N)+'</div>';
   card.classList.remove('hidden');
 }
 
